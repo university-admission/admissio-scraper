@@ -1,5 +1,5 @@
 # admissio-scraper
-Сервіс для витягання даних з сайту vstup.edbo для проєкту Admissio — система прогнозування шансів вступу до університету.
+Сервіс для витягання даних з сайту vstup.edbo для проєкту **Admissio** — система прогнозування шансів вступу до університету.
 
 ## Технології
 - Java 24
@@ -16,4 +16,10 @@
 ### Тестування
 ```bash
 ./mvnw test
+```
+
+## Запуск через Docker
+```bash
+docker build -t admissio-scraper .
+docker run -p 8081:8081 admissio-scraper
 ```
