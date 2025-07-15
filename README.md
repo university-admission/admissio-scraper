@@ -23,3 +23,6 @@
 docker build -t admissio-scraper .
 docker run -p 8081:8081 admissio-scraper
 ```
+
+## Перегляд ендпоіндів
+http://localhost:8081/swagger-ui/index.html#/
