@@ -41,6 +41,10 @@ public class Offer {
     private University university;
 
     @NonNull
+    @Column(name = "faculty")
+    private String faculty;
+
+    @NonNull
     @Column(name = "education_form", nullable = false)
     private Integer educationForm;
 
