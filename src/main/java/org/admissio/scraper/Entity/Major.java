@@ -28,7 +28,8 @@ public class Major {
     @Column(name = "major_code", nullable = false)
     private String majorCode;
 
-    @Column(name = "major_code_old")
+    @NonNull
+    @Column(name = "major_code_old", nullable = false)
     private Integer majorCodeOld;
 
     @NonNull

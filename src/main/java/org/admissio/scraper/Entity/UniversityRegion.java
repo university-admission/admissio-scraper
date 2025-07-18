@@ -20,7 +20,7 @@ public class UniversityRegion {
     private Long id;
 
     @NonNull
-    @Column(name = "regoin")
+    @Column(name = "regoin", nullable = false)
     private String region;
 
     @JsonIgnore

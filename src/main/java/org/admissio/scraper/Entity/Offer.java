@@ -41,7 +41,7 @@ public class Offer {
     private University university;
 
     @NonNull
-    @Column(name = "faculty")
+    @Column(name = "faculty", nullable = false)
     private String faculty;
 
     @NonNull
