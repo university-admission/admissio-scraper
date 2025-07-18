@@ -28,9 +28,10 @@ public class University {
     @Column(name = "university_code", nullable = false)
     private String universityCode;
 
-    @NonNull
-    @Column(name = "university_region", nullable = false)
-    private String universityRegion;
+    @JsonIgnore
+    @ManyToOne
+    @JoinColumn(name = "university_region_id", referencedColumnName = "id", nullable = false)
+    private UniversityRegion universityRegion;
 
     @JsonIgnore
     @OneToMany(mappedBy = "university")
