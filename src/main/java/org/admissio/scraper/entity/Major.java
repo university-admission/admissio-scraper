@@ -1,4 +1,4 @@
-package org.admissio.scraper.Entity;
+package org.admissio.scraper.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
