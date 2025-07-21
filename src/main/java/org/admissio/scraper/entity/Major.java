@@ -68,7 +68,7 @@ public class Major {
     @Column(name = "biology_coef", nullable = false)
     @Min(0)
     @Max(1)
-    private Double bioligyCoef;
+    private Double biologyCoef;
 
     @NonNull
     @Column(name = "geography_coef", nullable = false)
