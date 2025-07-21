@@ -2,6 +2,8 @@ package org.admissio.scraper.Entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 
 @Entity
@@ -30,16 +32,28 @@ public class Application {
     @JoinColumn(name = "offer_id", referencedColumnName = "id", nullable = false)
     private Offer offer;
 
+    @Column(name = "raw_score", nullable = false)
+    @NonNull
+    @Min(0)
+    @Max(200)
+    private Double rawScore;
+
     @Column(name = "score", nullable = false)
     @NonNull
-    private Float score;
+    @Min(0)
+    @Max(200)
+    private Double score;
 
     @Column(name = "priority", nullable = false)
     @NonNull
+    @Min(1)
+    @Max(15)
     private Integer priority;
 
     @Column(name = "quota", nullable = false)
     @NonNull
+    @Min(0)
+    @Max(2)
     private Integer quota;
 
     @Column(name = "is_budget", nullable = false)
