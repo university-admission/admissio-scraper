@@ -25,11 +25,12 @@ public class University {
     private String universityName;
 
     @NonNull
-    @Column(name = "university_code", nullable = false)
-    private String universityCode;
+    @Column(name = "university_code", nullable = false, unique = true)
+    private Integer universityCode;
 
     @JsonIgnore
     @ManyToOne
+    @NonNull
     @JoinColumn(name = "university_region_id", referencedColumnName = "id", nullable = false)
     private UniversityRegion universityRegion;
 
