@@ -1,5 +1,7 @@
 package org.admissio.scraper.service;
 
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.admissio.scraper.entity.*;
@@ -22,6 +24,8 @@ public class AnalyserService {
     UniversityRepository universityRepository;
     @NonNull
     MajorRepository majorRepository;
+    @NonNull
+    EntityManager entityManager;
 
     private final Random random = new Random();
 
@@ -30,17 +34,18 @@ public class AnalyserService {
     private Map<Long, List<Application>> applicationsByOffer;
     private Map<String, List<Application>> applicationsByStudentAndScore;
 
+    @Transactional
     public void analyse() {
-        System.out.println("Analyser service started\nStart loading data");
         setData();
-        System.out.println("Data loaded successfully\nStart analysing data");
+
+        loadDataToMemory();
         analyseData();
-        System.out.println("Data analysed successfully");
+        saveData();
+        System.out.println("Application analysed");
     }
 
-    private void analyseData() {
-        loadDataToMemory();
 
+    private void analyseData() {
         for ( Offer offer : allOffers) {
             List<Application> offerApps = new ArrayList<>(applicationsByOffer.get(offer.getId()));
 
@@ -50,13 +55,33 @@ public class AnalyserService {
                 analyseRecursive(application);
             }
         }
-
-        saveData();
     }
 
-    private void saveData() {
-        offerRepository.saveAll(allOffers);
-        applicationRepository.saveAll(allApplications);
+    public void saveData() {
+        int batchSize = 100;
+
+        saveOffersInBatches(batchSize);
+        saveApplicationsInBatches(batchSize);
+    }
+
+    private void saveOffersInBatches(int batchSize) {
+        for (int i = 0; i < allOffers.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, allOffers.size());
+            List<Offer> sub = allOffers.subList(i, end);
+            offerRepository.saveAll(sub);
+            entityManager.flush();
+            entityManager.clear();
+        }
+    }
+
+    private void saveApplicationsInBatches(int batchSize) {
+        for (int i = 0; i < allApplications.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, allApplications.size());
+            List<Application> sub = allApplications.subList(i, end);
+            applicationRepository.saveAll(sub);
+            entityManager.flush();
+            entityManager.clear();
+        }
     }
 
     private void loadDataToMemory(){
