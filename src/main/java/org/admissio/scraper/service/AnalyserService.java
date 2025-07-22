@@ -13,18 +13,17 @@ public class AnalyserService {
     ApplicationRepository applicationRepository;
     OfferRepository offerRepository;
     StudentRepository studentRepository;
-    UniversityRegionRepository universityRegionRepository;
     UniversityRepository universityRepository;
     MajorRepository majorRepository;
 
     private final Random random = new Random();
 
     public void analyse() {
-        System.out.println("Analyser service started\nStart loading data\n");
+        System.out.println("Analyser service started\nStart loading data");
         setData();
-        System.out.println("Data loaded successful\nStart analysing data\n");
+        System.out.println("Data loaded successful\nStart analysing data");
         analyseData();
-        System.out.println("Data analysed successful\n");
+        System.out.println("Data analysed successful");
     }
 
     private void analyseData() {
@@ -54,6 +53,7 @@ public class AnalyserService {
         if(application.getPriority().equals(studentApplications.getFirst().getPriority())){
             application.setIsCounted(true);
             application.setIsChecked(true);
+
             application.getOffer().setBudgetPlacesCount(application.getOffer().getBudgetPlacesCount() + 1);
             applicationRepository.save(application);
             offerRepository.save(application.getOffer());
@@ -95,27 +95,20 @@ public class AnalyserService {
     }
 
     private void setData(){
+        List<Major> majors = (List<Major>) majorRepository.findAll();
+        List<University> universities = (List<University>) universityRepository.findAll();
 
-        UniversityRegion universityRegion = new UniversityRegion("Київ");
-        universityRegionRepository.save(universityRegion);
+        int offersCount = majors.size() * universities.size();
 
-        University university = new University("НаУКМА", 79, universityRegion);
-        universityRepository.save(university);
-
-        Major major = new Major("ІПЗ", "f2", 121, 1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d);
-        majorRepository.save(major);
-
-        List<Integer> minScore = new  ArrayList<>(List.of(random.nextInt(100, 130), random.nextInt(100, 130), random.nextInt(100, 130)));
-
-        offerRepository.saveAll(List.of(
-                new Offer(1L, "Пропозиція 1", major, university, "ФІ", "Денна", 5, 0, 0, 0, minScore.getFirst(), minScore.getFirst(), minScore.getFirst(), minScore.getFirst(), minScore.getFirst(), minScore.getFirst(), minScore.getFirst(), minScore.getFirst(), minScore.getFirst(), minScore.getFirst(), 0, 1d),
-                new Offer(2L, "Пропозиція 2", major, university, "ФІ", "Денна", 7, 0, 0, 0, minScore.get(1), minScore.get(1), minScore.get(1), minScore.get(1), minScore.get(1), minScore.get(1), minScore.get(1), minScore.get(1), minScore.get(1), minScore.get(1), 0, 1d),
-                new Offer(3L, "Пропозиція 3", major, university, "ФІ", "Денна", 7, 0, 0, 0, minScore.getLast(), minScore.getLast(), minScore.getLast(), minScore.getLast(), minScore.getLast(), minScore.getLast(), minScore.getLast(), minScore.getLast(), minScore.getLast(), minScore.getLast(), 0, 1d)
-        ));
-
+        for( Major major : majors){
+            for(University university : universities){
+                Integer minScore = random.nextInt(100, 130);
+                offerRepository.save(new Offer(1L, "Пропозиція 1", major, university, "ФІ", "Денна", random.nextInt(offersCount / 2, offersCount * 2), 0, 0, 0, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, 0, 1d));
+            }
+        }
 
         List<Student> students = new ArrayList<>();
-        for (int i = 0; i < 30; i++)
+        for (int i = 0; i < 10 * offersCount; i++)
             students.add(new Student("Студент " + (i+1)));
 
         studentRepository.saveAll(students);
@@ -127,12 +120,10 @@ public class AnalyserService {
             Collections.shuffle(priorities);
 
             List<Offer> offers = (List<Offer>) offerRepository.findAll();
+            Collections.shuffle(offers);
 
-            int index = 0;
-            for(Offer offer : offers){
-                Integer priority = priorities.get(index);
-                applicationRepository.save(new Application(student, offer, score, score,  priority, 0, true));
-                index++;
+            for (int i = 0; i < priorities.size(); i++){
+                applicationRepository.save(new Application(student, offers.get(i), score, score, priorities.get(i), 0, true));
             }
         }
     }

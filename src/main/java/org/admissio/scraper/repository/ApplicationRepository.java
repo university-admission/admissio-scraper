@@ -14,6 +14,4 @@ public interface ApplicationRepository extends CrudRepository<Application, Long>
     List<Application> findAllByOfferOrderByScoreDesc(@NonNull Offer offer);
 
     List<Application> findAllByStudentAndRawScoreOrderByPriority(@NonNull Student student, @NonNull @Min(0) @Max(200) Double rawScore);
-
-
 }
