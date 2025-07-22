@@ -1,0 +1,13 @@
+CREATE TABLE applications (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES students(id),
+    offer_id INTEGER NOT NULL REFERENCES offers(id),
+    raw_score DOUBLE PRECISION NOT NULL CHECK (raw_score BETWEEN 0 AND 200),
+    score DOUBLE PRECISION NOT NULL CHECK (score BETWEEN 0 AND 200),
+    priority INTEGER NOT NULL CHECK (priority BETWEEN 1 AND 15),
+    quota INTEGER NOT NULL CHECK (quota BETWEEN 0 AND 2),
+    is_budget BOOLEAN NOT NULL,
+    is_actual BOOLEAN NOT NULL DEFAULT FALSE,
+    is_counted BOOLEAN NOT NULL DEFAULT FALSE,
+    is_checked BOOLEAN NOT NULL DEFAULT FALSE
+);
