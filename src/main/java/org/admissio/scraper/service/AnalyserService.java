@@ -1,37 +1,84 @@
 package org.admissio.scraper.service;
 
-import lombok.AllArgsConstructor;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.admissio.scraper.entity.*;
 import org.admissio.scraper.repository.*;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AnalyserService {
+    @NonNull
     ApplicationRepository applicationRepository;
+    @NonNull
     OfferRepository offerRepository;
+    @NonNull
     StudentRepository studentRepository;
+    @NonNull
     UniversityRepository universityRepository;
+    @NonNull
     MajorRepository majorRepository;
 
     private final Random random = new Random();
 
+    private List<Application> allApplications;
+    private List<Offer> allOffers;
+    private Map<Long, List<Application>> applicationsByOffer;
+    private Map<String, List<Application>> applicationsByStudentAndScore;
+
     public void analyse() {
         System.out.println("Analyser service started\nStart loading data");
         setData();
-        System.out.println("Data loaded successful\nStart analysing data");
+        System.out.println("Data loaded successfully\nStart analysing data");
         analyseData();
-        System.out.println("Data analysed successful");
+        System.out.println("Data analysed successfully");
     }
 
     private void analyseData() {
-        for ( Offer offer : offerRepository.findAll()) {
-            for (Application application : applicationRepository.findAllByOfferOrderByScoreDesc(offer)) {
+        loadDataToMemory();
+
+        for ( Offer offer : allOffers) {
+            List<Application> offerApps = new ArrayList<>(applicationsByOffer.get(offer.getId()));
+
+            offerApps.sort(Comparator.comparingDouble(Application::getScore).reversed());
+
+            for (Application application : offerApps) {
                 analyseRecursive(application);
             }
         }
+
+        saveData();
+    }
+
+    private void saveData() {
+        offerRepository.saveAll(allOffers);
+        applicationRepository.saveAll(allApplications);
+    }
+
+    private void loadDataToMemory(){
+        allOffers = (List<Offer>) offerRepository.findAll();
+        Map<Long, Offer> offersById = allOffers.stream()
+                .collect(Collectors.toMap(Offer::getId, o -> o));
+
+        allApplications = (List<Application>) applicationRepository.findAll();
+
+        for (Application app : allApplications) {
+            Long offerId = app.getOffer().getId();
+            Offer canonicalOffer = offersById.get(offerId);
+            app.setOffer(canonicalOffer);
+        }
+
+        applicationsByOffer = allApplications.stream()
+                .collect(Collectors.groupingBy(a -> a.getOffer().getId()));
+
+        applicationsByStudentAndScore = allApplications.stream()
+                .collect(Collectors.groupingBy(a ->
+                        a.getStudent().getId() + "_" + a.getRawScore()
+                ));
     }
 
     private void analyseRecursive(Application application) {
@@ -40,7 +87,6 @@ public class AnalyserService {
 
         if(application.getOffer().getBudgetPlaces() <= application.getOffer().getBudgetPlacesCount()){
             application.setIsChecked(true);
-            applicationRepository.save(application);
             return;
         }
 
@@ -48,30 +94,31 @@ public class AnalyserService {
         if (prevApp != null)
             analyseRecursive(prevApp);
 
-        List<Application> studentApplications = applicationRepository.findAllByStudentAndRawScoreOrderByPriority(application.getStudent(), application.getRawScore());
+        if(application.getOffer().getBudgetPlaces() <= application.getOffer().getBudgetPlacesCount()){
+            application.setIsChecked(true);
+            return;
+        }
+
+        List<Application> studentApplications = new ArrayList<>(applicationsByStudentAndScore.get(application.getStudent().getId() + "_" + application.getRawScore()));
+        studentApplications.sort(Comparator.comparingInt(Application::getPriority));
 
         if(application.getPriority().equals(studentApplications.getFirst().getPriority())){
             application.setIsCounted(true);
             application.setIsChecked(true);
 
             application.getOffer().setBudgetPlacesCount(application.getOffer().getBudgetPlacesCount() + 1);
-            applicationRepository.save(application);
-            offerRepository.save(application.getOffer());
             return;
         }
 
         for (Application studentApplication : studentApplications) {
             if (application.getPriority().equals(studentApplication.getPriority())){
-                if(studentApplications.stream().anyMatch(Application::getIsCounted)) {
+                if(studentApplications.stream().anyMatch(Application::getIsCounted))
                     application.setIsChecked(true);
-                    applicationRepository.save(application);
-                }
+
                 else {
                     application.setIsCounted(true);
                     application.setIsChecked(true);
                     application.getOffer().setBudgetPlacesCount(application.getOffer().getBudgetPlacesCount() + 1);
-                    offerRepository.save(application.getOffer());
-                    applicationRepository.save(application);
                 }
                 return;
             }
@@ -85,13 +132,12 @@ public class AnalyserService {
     }
 
     private Application getPrevApplication(Application application) {
-        Offer offer = offerRepository.findById(application.getOffer().getId()).get();
-        List<Application> applications = applicationRepository.findAllByOfferOrderByScoreDesc(offer);
+        List<Application> applications = new ArrayList<>(applicationsByOffer.get(application.getOffer().getId()));
+
+        applications.sort(Comparator.comparingDouble(Application::getScore).reversed());
+
         int index = applications.indexOf(application);
-        if (index - 1 < 0)
-            return null;
-        else
-            return applications.get(index - 1);
+        return index > 0 ? applications.get(index - 1) : null;
     }
 
     private void setData(){
@@ -103,7 +149,7 @@ public class AnalyserService {
         for( Major major : majors){
             for(University university : universities){
                 Integer minScore = random.nextInt(100, 130);
-                offerRepository.save(new Offer(1L, "Пропозиція 1", major, university, "ФІ", "Денна", random.nextInt(offersCount / 2, offersCount * 2), 0, 0, 0, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, 0, 1d));
+                offerRepository.save(new Offer(1L, "Пропозиція 1", major, university, "ФІ", "Денна", random.nextInt(offersCount / 2, offersCount + 1), 0, 0, 0, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, 0, 1d));
             }
         }
 
@@ -122,7 +168,7 @@ public class AnalyserService {
             List<Offer> offers = (List<Offer>) offerRepository.findAll();
             Collections.shuffle(offers);
 
-            for (int i = 0; i < priorities.size(); i++){
+            for (int i = 0; i < priorities.size() - 1; i++){
                 applicationRepository.save(new Application(student, offers.get(i), score, score, priorities.get(i), 0, true));
             }
         }
