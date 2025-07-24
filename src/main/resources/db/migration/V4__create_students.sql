@@ -1,0 +1,4 @@
+CREATE TABLE students (
+    id BIGSERIAL PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL
+);
