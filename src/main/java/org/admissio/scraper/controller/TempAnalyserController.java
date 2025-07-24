@@ -10,12 +10,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @AllArgsConstructor
 public class TempAnalyserController implements CommandLineRunner {
     AnalyserService analyserService;
-    private Flyway flyway;
+    //private Flyway flyway;
 
     @Override
     public void run(String... args) {
-        flyway.clean();
-        flyway.migrate();
+        /*flyway.clean();
+        flyway.migrate();*/
 
         analyserService.analyse();
     }
