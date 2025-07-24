@@ -1,6 +1,5 @@
-
 CREATE TABLE majors (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     major_name VARCHAR(255) NOT NULL,
     major_code VARCHAR(255) NOT NULL UNIQUE,
     major_code_old INTEGER NOT NULL UNIQUE,

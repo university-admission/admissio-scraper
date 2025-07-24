@@ -50,15 +50,14 @@ public class Application {
     @Max(15)
     private Integer priority;
 
-    @Column(name = "quota", nullable = false)
-    @NonNull
-    @Min(0)
-    @Max(2)
-    private Integer quota;
-
     @Column(name = "is_budget", nullable = false)
     @NonNull
     private Boolean isBudget;
+
+    @Column(name = "quote_type", nullable = false)
+    @NonNull
+    @Enumerated(EnumType.STRING)
+    private QuotaType quotaType;
 
     @Column(name = "is_actual", nullable = false)
     private Boolean isActual = false;

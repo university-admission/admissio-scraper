@@ -1,9 +1,9 @@
 CREATE TABLE offers (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     edbo_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL,
-    major_id INTEGER NOT NULL REFERENCES majors(id),
-    university_id INTEGER NOT NULL REFERENCES universities(id),
+    major_id BIGINT NOT NULL REFERENCES majors(id),
+    university_id BIGINT NOT NULL REFERENCES universities(id),
     faculty VARCHAR(255) NOT NULL,
     education_form VARCHAR(255) NOT NULL,
     budget_places INTEGER NOT NULL,
