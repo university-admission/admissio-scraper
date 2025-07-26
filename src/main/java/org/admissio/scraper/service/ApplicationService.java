@@ -39,7 +39,7 @@ public class ApplicationService {
 
         // Send a request
         ResponseEntity<String> response = restTemplate.exchange(
-                "https://vstup2024.edbo.gov.ua/offer-requests/",
+                FULL_API_URL,
                 HttpMethod.POST,
                 request,
                 String.class
