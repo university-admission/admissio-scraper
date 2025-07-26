@@ -3,8 +3,12 @@ package org.admissio.scraper.service;
 import org.admissio.scraper.dto.offer.EdboResponseWrapper;
 import org.admissio.scraper.dto.offer.OfferDetailsDto;
 import org.admissio.scraper.dto.offer.SubjectDetailsDto;
+import org.admissio.scraper.entity.Major;
 import org.admissio.scraper.entity.Offer;
+import org.admissio.scraper.entity.University;
+import org.admissio.scraper.repository.OfferRepository;
 import org.admissio.scraper.utils.WebClientInsecure;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -12,16 +16,28 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.Optional;
+
 @Service
 public class OfferService {
     private final WebClient webClient;
+    private MajorService majorService;
+    private UniversityService universityService;
     private static final String FULL_API_URL = "https://vstup.edbo.gov.ua/offers-list/";
     private final ObjectMapper jacksonObjectMapper;
+    private OfferRepository offerRepository;
+    private final String highScoreMajorCodes[] = {"C3", "D4", "D8", "D9", "I1", "I2", "I3", "I4", "I8"};
     private final int offerIdArr[] = {1472870};
 
-    OfferService(ObjectMapper jacksonObjectMapper) {
+    OfferService(ObjectMapper jacksonObjectMapper,
+                 MajorService majorService,
+                 UniversityService universityService,
+                 OfferRepository offerRepository) {
         this.webClient = WebClientInsecure.createInsecureWebClient(FULL_API_URL);
         this.jacksonObjectMapper = jacksonObjectMapper;
+        this.majorService = majorService;
+        this.universityService = universityService;
+        this.offerRepository = offerRepository;
     }
 
     public void scrapeOffers() {
@@ -36,7 +52,6 @@ public class OfferService {
                             EdboResponseWrapper edboResponse = jacksonObjectMapper.readValue(rawResponse, EdboResponseWrapper.class);
 
                             if (edboResponse != null && edboResponse.getOffers() != null && !edboResponse.getOffers().isEmpty()) {
-                                System.out.println("Successfully parsed JSON (from HTML content type) to EdboResponseWrapper.");
                                 System.out.println("Received EdboResponseWrapper with " + edboResponse.getOffers().size() + " offers.");
                                 edboResponse.getOffers().forEach(this::processAndMapOffer);
                             } else {
@@ -55,10 +70,6 @@ public class OfferService {
 
     private Mono<String> sendRequestForRawBody(int offerId) {
         String body = "ids=" + offerId;
-        System.out.println("=== REQUEST TO EDBO ===");
-        System.out.println("POST " + FULL_API_URL);
-        System.out.println("Body: " + body);
-        System.out.println("=======================");
 
         return webClient.post()
                 .uri(FULL_API_URL)
@@ -69,11 +80,10 @@ public class OfferService {
                 .retrieve()
                 .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
                         response -> response.bodyToMono(String.class).map(Exception::new))
-                .bodyToMono(String.class) // <-- Crucial change: expect String here
+                .bodyToMono(String.class)
                 .doOnError(e -> {
                     System.err.println("=== ERROR IN EDBO WEBCLIENT REQUEST (Raw Body) ===");
                     e.printStackTrace();
-                    System.err.println("==========================");
                 });
     }
 
@@ -91,6 +101,11 @@ public class OfferService {
         offer.setQuota1Places(offerDto.getBudgetPlaces() / 10); // minimum 10% of budget
         offer.setQuota2Places(offerDto.getBudgetPlaces() / 10); // minimum 10% of budget
 
+        if (offer.getQuota1Places() < 1 && offer.getBudgetPlaces() > 0)
+            offer.setQuota1Places(1);
+        if (offer.getQuota2Places() < 1 && offer.getBudgetPlaces() > 0)
+            offer.setQuota2Places(1);
+
         // Convert regionCoefString to Double
         try {
             if (offerDto.getRegionCoefString() != null) {
@@ -105,6 +120,42 @@ public class OfferService {
 
 
         // Extracting min scores from subjectDetailsMap (the 'os' field in JSON)
+        setSubjectsMinScore(offerDto, offer);
+
+        // Set min score
+        offer.setMinCompetitionScore(100);
+
+        for (String code: highScoreMajorCodes){
+            if (offerDto.getMajorCode().equalsIgnoreCase(code)) {
+                offer.setMinCompetitionScore(150);
+                break;
+            }
+        }
+
+        offer.setAdditionalPoints(0);
+
+        // Get Major and Uni from db
+        try {
+            Major major = getMajorByCode(offerDto.getMajorCode());
+            offer.setMajor(major);
+        }catch (Exception e){
+            System.err.println(e.getMessage() + " for edbo_id "+offerDto.getEdboUsid());
+            return;
+        }
+
+        try {
+            University uni = getUniversityByCode(offerDto.getUniversityCode());
+            offer.setUniversity(uni);
+        }catch (Exception e){
+            System.err.println(e.getMessage() + " for edbo_id "+offerDto.getEdboUsid());
+            return;
+        }
+
+        offerRepository.save(offer);
+
+    }
+
+    private void setSubjectsMinScore(OfferDetailsDto offerDto, Offer offer){
         if (offerDto.getSubjectDetailsMap() != null) {
             for (SubjectDetailsDto subject : offerDto.getSubjectDetailsMap().values()) {
                 switch (subject.getSubjectName()) {
@@ -135,29 +186,32 @@ public class OfferService {
                     case "Хімія":
                         offer.setMinChemistryScore(subject.getMinScore());
                         break;
-                    // Add more cases for other subjects as needed
+                    case "Мотиваційний лист":
+                        break;
                     default:
                         // Log or handle subjects that are not mapped to your entity
                         System.err.println("Unhandled subject: " + subject.getSubjectName() + " with score: " + subject.getMinScore());
                 }
             }
         }
+    }
 
-        // Extracting min competition score
-        // TODO: set minScore
-        Double minMajorScore = offerDto.getScoreStatistics().getCompetitionScore().getMinCompScore();
-        if (minMajorScore != null) {
-            offer.setMinCompetitionScore(offerDto.getScoreStatistics().getCompetitionScore().getMinCompScore().intValue());
-        } else {
-            offer.setMinCompetitionScore(100);
+    private Major getMajorByCode(String majorCode) throws Exception {
+        Optional<Major> major = majorService.findMajorByCode(majorCode);
+        if (major.isPresent()) {
+            return major.get();
+        }else {
+            throw new Exception("Major code " + majorCode + " not found in db");
         }
+    }
 
-        offer.setAdditionalPoints(0);
-
-        System.out.println("Populated Offer entity (sample): EDBO ID=" + offer.getEdboId() + ", Name=" + offer.getName() + ", Faculty=" + offer.getFaculty());
-
-        // TODO: Save the offer to the database
-
+    private University getUniversityByCode(Integer universityCode) throws Exception {
+        Optional<University> university = universityService.findByUniversityCode(universityCode);
+        if (university.isPresent()) {
+            return university.get();
+        }else {
+            throw new Exception("University code " + universityCode + " not found in db");
+        }
     }
 
 }

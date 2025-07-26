@@ -21,6 +21,9 @@ public class OfferDetailsDto {
     @JsonProperty("un") // University name
     private String universityName;
 
+    @JsonProperty("uid")
+    private Integer universityCode;
+
     @JsonProperty("ufn") // Faculty name
     private String facultyName; // Corresponds to Offer.faculty
 
