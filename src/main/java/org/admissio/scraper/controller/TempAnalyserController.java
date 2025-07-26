@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import org.admissio.scraper.service.AnalyserService;
 import org.admissio.scraper.service.ApplicationService;
 import org.admissio.scraper.service.OfferService;
+import org.admissio.scraper.service.UniversityService;
 import org.flywaydb.core.Flyway;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,6 +16,7 @@ public class TempAnalyserController implements CommandLineRunner {
     AnalyserService analyserService;
     ApplicationService applicationService;
     OfferService offerService;
+    UniversityService universityService;
     //private Flyway flyway;
 
     @Override
@@ -24,7 +26,9 @@ public class TempAnalyserController implements CommandLineRunner {
 
         //analyserService.analyse();
 
-        offerService.scrapeOffers();
+        //offerService.scrapeOffers();
+
+        universityService.scrapeUniversities();
 
     }
 }

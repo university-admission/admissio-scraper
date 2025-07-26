@@ -8,7 +8,6 @@ import org.admissio.scraper.entity.Offer;
 import org.admissio.scraper.entity.University;
 import org.admissio.scraper.repository.OfferRepository;
 import org.admissio.scraper.utils.WebClientInsecure;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -27,23 +26,20 @@ public class OfferService {
     private final ObjectMapper jacksonObjectMapper;
     private OfferRepository offerRepository;
     private final String highScoreMajorCodes[] = {"C3", "D4", "D8", "D9", "I1", "I2", "I3", "I4", "I8"};
-    private final int offerIdArr[] = {1472870};
 
     OfferService(ObjectMapper jacksonObjectMapper,
                  MajorService majorService,
-                 UniversityService universityService,
                  OfferRepository offerRepository) {
         this.webClient = WebClientInsecure.createInsecureWebClient(FULL_API_URL);
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.majorService = majorService;
-        this.universityService = universityService;
         this.offerRepository = offerRepository;
     }
 
-    public void scrapeOffers() {
+    public void scrapeOffers(int[] offerIdArr, University university) {
 
         for (int id : offerIdArr) {
-            Mono<String> rawResponseMono = sendRequestForRawBody(id);
+            Mono<String> rawResponseMono = sendRequestForRawOffer(id);
 
             rawResponseMono.subscribe(
                     rawResponse -> {
@@ -53,7 +49,7 @@ public class OfferService {
 
                             if (edboResponse != null && edboResponse.getOffers() != null && !edboResponse.getOffers().isEmpty()) {
                                 System.out.println("Received EdboResponseWrapper with " + edboResponse.getOffers().size() + " offers.");
-                                edboResponse.getOffers().forEach(this::processAndMapOffer);
+                                edboResponse.getOffers().forEach(offerDto -> processAndMapOffer(offerDto, university));
                             } else {
                                 System.out.println("Parsed JSON is empty or null offers list for ID: " + id);
                             }
@@ -68,7 +64,7 @@ public class OfferService {
     }
 
 
-    private Mono<String> sendRequestForRawBody(int offerId) {
+    private Mono<String> sendRequestForRawOffer(int offerId) {
         String body = "ids=" + offerId;
 
         return webClient.post()
@@ -87,7 +83,7 @@ public class OfferService {
                 });
     }
 
-    private void processAndMapOffer(OfferDetailsDto offerDto) {
+    private void processAndMapOffer(OfferDetailsDto offerDto, University university) {
         System.out.println("Processing offer DTO with EDBO ID: " + offerDto.getEdboUsid());
 
         Offer offer = new Offer();
@@ -143,13 +139,7 @@ public class OfferService {
             return;
         }
 
-        try {
-            University uni = getUniversityByCode(offerDto.getUniversityCode());
-            offer.setUniversity(uni);
-        }catch (Exception e){
-            System.err.println(e.getMessage() + " for edbo_id "+offerDto.getEdboUsid());
-            return;
-        }
+        offer.setUniversity(university);
 
         offerRepository.save(offer);
 
@@ -202,15 +192,6 @@ public class OfferService {
             return major.get();
         }else {
             throw new Exception("Major code " + majorCode + " not found in db");
-        }
-    }
-
-    private University getUniversityByCode(Integer universityCode) throws Exception {
-        Optional<University> university = universityService.findByUniversityCode(universityCode);
-        if (university.isPresent()) {
-            return university.get();
-        }else {
-            throw new Exception("University code " + universityCode + " not found in db");
         }
     }
 
