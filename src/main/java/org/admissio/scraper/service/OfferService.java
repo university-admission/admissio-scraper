@@ -14,7 +14,6 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.util.Optional;
 
 @Service
@@ -38,7 +37,7 @@ public class OfferService {
 
     public void scrapeOffers(String offerIds, University university) {
         // Logs for debug
-        System.out.println("Initiating scrape for offers with IDs: " + offerIds + " for University: " + university.getUniversityName() + " (" + university.getUniversityCode() + ")");
+        //System.out.println("Initiating scrape for offers with IDs: " + offerIds + " for University: " + university.getUniversityName() + " (" + university.getUniversityCode() + ")");
 
         Mono<String> rawResponseMono = sendRequestForRawOffer(offerIds);
 
@@ -48,8 +47,7 @@ public class OfferService {
                         EdboResponseWrapper edboResponse = jacksonObjectMapper.readValue(rawResponse, EdboResponseWrapper.class);
 
                         if (edboResponse != null && edboResponse.getOffers() != null && !edboResponse.getOffers().isEmpty()) {
-                            System.out.println("Received EdboResponseWrapper with " + edboResponse.getOffers().size() + " offers for IDs: " + offerIds);
-                            // Передаємо university об'єкт в forEach
+                            //System.out.println("Received EdboResponseWrapper with " + edboResponse.getOffers().size() + " offers for IDs: " + offerIds);
                             edboResponse.getOffers().forEach(offerDto -> processAndMapOffer(offerDto, university));
                         } else {
                             System.out.println("Parsed JSON is empty or null offers list for IDs: " + offerIds);
@@ -61,6 +59,7 @@ public class OfferService {
                 },
                 error -> System.err.println("Error during raw request or parsing for batch IDs [" + offerIds + "]: " + error.getMessage())
         );
+
     }
 
 
@@ -84,13 +83,13 @@ public class OfferService {
     }
 
     private void processAndMapOffer(OfferDetailsDto offerDto, University university) {
-        System.out.println("Processing offer DTO with EDBO ID: " + offerDto.getEdboUsid());
+        //System.out.println("Processing offer DTO with EDBO ID: " + offerDto.getEdboUsid());
 
         Offer offer = new Offer();
 
         offer.setEdboId(offerDto.getEdboUsid());
         offer.setName(offerDto.getName() != null ? offerDto.getName() : offerDto.getMajorCode());
-        offer.setFaculty(offerDto.getFacultyName());
+        offer.setFaculty(offerDto.getFacultyName() != null ? offerDto.getFacultyName() : "Не вказано");
         offer.setEducationForm(offerDto.getEducationFormName());
         int budgetPlaces = offerDto.getBudgetPlaces() != null ? offerDto.getBudgetPlaces() : 0;
         offer.setBudgetPlaces(budgetPlaces);
