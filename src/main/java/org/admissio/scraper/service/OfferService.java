@@ -36,36 +36,36 @@ public class OfferService {
         this.offerRepository = offerRepository;
     }
 
-    public void scrapeOffers(int[] offerIdArr, University university) {
+    public void scrapeOffers(String offerIds, University university) {
+        // Logs for debug
+        System.out.println("Initiating scrape for offers with IDs: " + offerIds + " for University: " + university.getUniversityName() + " (" + university.getUniversityCode() + ")");
 
-        for (int id : offerIdArr) {
-            Mono<String> rawResponseMono = sendRequestForRawOffer(id);
+        Mono<String> rawResponseMono = sendRequestForRawOffer(offerIds);
 
-            rawResponseMono.subscribe(
-                    rawResponse -> {
-                        try {
-                            // Manually parse the String as JSON using ObjectMapper
-                            EdboResponseWrapper edboResponse = jacksonObjectMapper.readValue(rawResponse, EdboResponseWrapper.class);
+        rawResponseMono.subscribe(
+                rawResponse -> {
+                    try {
+                        EdboResponseWrapper edboResponse = jacksonObjectMapper.readValue(rawResponse, EdboResponseWrapper.class);
 
-                            if (edboResponse != null && edboResponse.getOffers() != null && !edboResponse.getOffers().isEmpty()) {
-                                System.out.println("Received EdboResponseWrapper with " + edboResponse.getOffers().size() + " offers.");
-                                edboResponse.getOffers().forEach(offerDto -> processAndMapOffer(offerDto, university));
-                            } else {
-                                System.out.println("Parsed JSON is empty or null offers list for ID: " + id);
-                            }
-                        } catch (Exception e) {
-                            System.err.println("Failed to parse raw response as JSON for ID " + id + ": " + e.getMessage());
-                            e.printStackTrace();
+                        if (edboResponse != null && edboResponse.getOffers() != null && !edboResponse.getOffers().isEmpty()) {
+                            System.out.println("Received EdboResponseWrapper with " + edboResponse.getOffers().size() + " offers for IDs: " + offerIds);
+                            // Передаємо university об'єкт в forEach
+                            edboResponse.getOffers().forEach(offerDto -> processAndMapOffer(offerDto, university));
+                        } else {
+                            System.out.println("Parsed JSON is empty or null offers list for IDs: " + offerIds);
                         }
-                    },
-                    error -> System.err.println("Error during raw request or parsing for ID " + id + ": " + error.getMessage())
-            );
-        }
+                    } catch (Exception e) {
+                        System.err.println("Failed to parse raw response as JSON for the batch of IDs [" + offerIds + "]: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                },
+                error -> System.err.println("Error during raw request or parsing for batch IDs [" + offerIds + "]: " + error.getMessage())
+        );
     }
 
 
-    private Mono<String> sendRequestForRawOffer(int offerId) {
-        String body = "ids=" + offerId;
+    private Mono<String> sendRequestForRawOffer(String offerIds) {
+        String body = "ids=" + offerIds;
 
         return webClient.post()
                 .uri(FULL_API_URL)
@@ -92,14 +92,15 @@ public class OfferService {
         offer.setName(offerDto.getName() != null ? offerDto.getName() : offerDto.getMajorCode());
         offer.setFaculty(offerDto.getFacultyName());
         offer.setEducationForm(offerDto.getEducationFormName());
-        offer.setBudgetPlaces(offerDto.getBudgetPlaces() != null ? offerDto.getBudgetPlaces() : 0);
+        int budgetPlaces = offerDto.getBudgetPlaces() != null ? offerDto.getBudgetPlaces() : 0;
+        offer.setBudgetPlaces(budgetPlaces);
         offer.setContractPlaces(offerDto.getContractPlaces() != null ? offerDto.getContractPlaces() : 0);
-        offer.setQuota1Places(offerDto.getBudgetPlaces() / 10); // minimum 10% of budget
-        offer.setQuota2Places(offerDto.getBudgetPlaces() / 10); // minimum 10% of budget
+        offer.setQuota1Places(budgetPlaces / 10); // minimum 10% of budget
+        offer.setQuota2Places(budgetPlaces / 10); // minimum 10% of budget
 
-        if (offer.getQuota1Places() < 1 && offer.getBudgetPlaces() > 0)
+        if (offer.getQuota1Places() < 1 && budgetPlaces > 0)
             offer.setQuota1Places(1);
-        if (offer.getQuota2Places() < 1 && offer.getBudgetPlaces() > 0)
+        if (offer.getQuota2Places() < 1 && budgetPlaces > 0)
             offer.setQuota2Places(1);
 
         // Convert regionCoefString to Double
@@ -114,6 +115,7 @@ public class OfferService {
             offer.setRegionCoef(1.0);
         }
 
+        offer.setAdditionalPoints(0);
 
         // Extracting min scores from subjectDetailsMap (the 'os' field in JSON)
         setSubjectsMinScore(offerDto, offer);
@@ -121,21 +123,20 @@ public class OfferService {
         // Set min score
         offer.setMinCompetitionScore(100);
 
-        for (String code: highScoreMajorCodes){
+        for (String code : highScoreMajorCodes) {
             if (offerDto.getMajorCode().equalsIgnoreCase(code)) {
                 offer.setMinCompetitionScore(150);
                 break;
             }
         }
 
-        offer.setAdditionalPoints(0);
-
         // Get Major and Uni from db
         try {
-            Major major = getMajorByCode(offerDto.getMajorCode());
+            String majorCode = offerDto.getDetailedMajorCode() != null ? offerDto.getDetailedMajorCode() : offerDto.getMajorCode();
+            Major major = getMajorByCode(majorCode);
             offer.setMajor(major);
-        }catch (Exception e){
-            System.err.println(e.getMessage() + " for edbo_id "+offerDto.getEdboUsid());
+        } catch (Exception e) {
+            System.err.println(e.getMessage() + " for edbo_id " + offerDto.getEdboUsid());
             return;
         }
 
@@ -145,7 +146,7 @@ public class OfferService {
 
     }
 
-    private void setSubjectsMinScore(OfferDetailsDto offerDto, Offer offer){
+    private void setSubjectsMinScore(OfferDetailsDto offerDto, Offer offer) {
         if (offerDto.getSubjectDetailsMap() != null) {
             for (SubjectDetailsDto subject : offerDto.getSubjectDetailsMap().values()) {
                 switch (subject.getSubjectName()) {
@@ -176,10 +177,13 @@ public class OfferService {
                     case "Хімія":
                         offer.setMinChemistryScore(subject.getMinScore());
                         break;
+                    case "Бал за успішне закінчення підготовчих курсів закладу освіти":
+                        offer.setAdditionalPoints(1);
+                        break;
                     case "Мотиваційний лист":
                         break;
                     default:
-                        // Log or handle subjects that are not mapped to your entity
+                        // Log or handle subjects that are not mapped to entity
                         System.err.println("Unhandled subject: " + subject.getSubjectName() + " with score: " + subject.getMinScore());
                 }
             }
@@ -190,7 +194,7 @@ public class OfferService {
         Optional<Major> major = majorService.findMajorByCode(majorCode);
         if (major.isPresent()) {
             return major.get();
-        }else {
+        } else {
             throw new Exception("Major code " + majorCode + " not found in db");
         }
     }

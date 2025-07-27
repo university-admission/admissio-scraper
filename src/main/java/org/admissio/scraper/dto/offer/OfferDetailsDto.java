@@ -18,6 +18,9 @@ public class OfferDetailsDto {
     @JsonProperty("ssc") // Full name with code, useful if 'ssn' is too short
     private String majorCode;
 
+    @JsonProperty("szc")
+    private String detailedMajorCode;
+
     @JsonProperty("un") // University name
     private String universityName;
 
