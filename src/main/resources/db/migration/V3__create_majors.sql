@@ -2,7 +2,6 @@ CREATE TABLE majors (
     id BIGSERIAL PRIMARY KEY,
     major_name VARCHAR(255) NOT NULL,
     major_code VARCHAR(255) NOT NULL UNIQUE,
-    major_code_old INTEGER NOT NULL UNIQUE,
     uk_lang_coef DOUBLE PRECISION NOT NULL,
     math_coef DOUBLE PRECISION NOT NULL,
     history_coef DOUBLE PRECISION NOT NULL,
