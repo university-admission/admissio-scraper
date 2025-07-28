@@ -379,7 +379,7 @@ public class AnalyserService {
 
         List<Student> students = new ArrayList<>();
         for (int i = 0; i < 10 * offersCount; i++)
-            //students.add(new Student("Студент " + (i + 1)));
+            students.add(new Student("Студент " + (i+1), (double) random.nextInt(100, 200)));
 
         studentRepository.saveAll(students);
 
