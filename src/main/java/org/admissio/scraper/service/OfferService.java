@@ -20,7 +20,6 @@ import java.util.Optional;
 public class OfferService {
     private final WebClient webClient;
     private MajorService majorService;
-    private UniversityService universityService;
     private static final String FULL_API_URL = "https://vstup.edbo.gov.ua/offers-list/";
     private final ObjectMapper jacksonObjectMapper;
     private OfferRepository offerRepository;
@@ -129,15 +128,22 @@ public class OfferService {
             }
         }
 
-        // Get Major and Uni from db
-        try {
-            String majorCode = offerDto.getDetailedMajorCode() != null ? offerDto.getDetailedMajorCode() : offerDto.getMajorCode();
-            Major major = getMajorByCode(majorCode);
-            offer.setMajor(major);
-        } catch (Exception e) {
-            System.err.println(e.getMessage() + " for edbo_id " + offerDto.getEdboUsid());
-            return;
+        // Get Major
+        Optional<Major> majorOptional = majorService.findMajorByCode(offerDto.getMajorCode());
+        if (majorOptional.isPresent()) {
+            offer.setMajor(majorOptional.get());
+        } else {
+            offer.setMajor(majorService.addMajor(offerDto));
         }
+
+//        try {
+//            String majorCode = offerDto.getDetailedMajorCode() != null ? offerDto.getDetailedMajorCode() : offerDto.getMajorCode();
+//            Major major = getMajorByCode(majorCode);
+//            offer.setMajor(major);
+//        } catch (Exception e) {
+//            System.err.println(e.getMessage() + " for edbo_id " + offerDto.getEdboUsid());
+//            return;
+//        }
 
         offer.setUniversity(university);
 
@@ -188,6 +194,7 @@ public class OfferService {
             }
         }
     }
+
 
     private Major getMajorByCode(String majorCode) throws Exception {
         Optional<Major> major = majorService.findMajorByCode(majorCode);
