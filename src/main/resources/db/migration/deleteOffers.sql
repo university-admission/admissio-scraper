@@ -1,1 +1,1 @@
-DELETE FROM offers;
+DELETE FROM universities;

@@ -129,21 +129,12 @@ public class OfferService {
         }
 
         // Get Major
-        Optional<Major> majorOptional = majorService.findMajorByCode(offerDto.getMajorCode());
+        Optional<Major> majorOptional = majorService.getMajor(offerDto.getMajorCode());
         if (majorOptional.isPresent()) {
             offer.setMajor(majorOptional.get());
         } else {
             offer.setMajor(majorService.addMajor(offerDto));
         }
-
-//        try {
-//            String majorCode = offerDto.getDetailedMajorCode() != null ? offerDto.getDetailedMajorCode() : offerDto.getMajorCode();
-//            Major major = getMajorByCode(majorCode);
-//            offer.setMajor(major);
-//        } catch (Exception e) {
-//            System.err.println(e.getMessage() + " for edbo_id " + offerDto.getEdboUsid());
-//            return;
-//        }
 
         offer.setUniversity(university);
 

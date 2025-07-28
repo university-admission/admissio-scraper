@@ -14,7 +14,7 @@ import java.util.Optional;
 public class MajorService {
     private final MajorRepository majorRepository;
     private Integer tempKey = 2;
-    //private List<Major> majorsCache;
+    private List<Major> majorsCache;
     private final String[] supportedMajors = {
             "A2", "A3", "A4", "A5", "A6", "E3", "E4", "E5", "E6", "E7", "E8",
             "G1", "G2", "G3", "G4", "G5", "G6", "G7",
@@ -26,6 +26,11 @@ public class MajorService {
     MajorService(MajorRepository majorRepository) {
         this.majorRepository = majorRepository;
 
+    }
+
+    @PostConstruct
+    public void init() {
+        this.majorsCache = majorRepository.findAll();
     }
 
     public Major addMajor(OfferDetailsDto dto) {
@@ -43,18 +48,18 @@ public class MajorService {
         }
 
         majorRepository.save(major);
-        //majorsCache.add(major);
+        majorsCache.add(major);
         return major;
     }
 
-//    public Optional<Major> getMajor(String majorCode) {
-//        for (Major major : majorsCache) {
-//            if (major.getMajorCode().equalsIgnoreCase(majorCode)) {
-//                return Optional.of(major);
-//            }
-//        }
-//        return Optional.empty();
-//    }
+    public Optional<Major> getMajor(String majorCode) {
+        for (Major major : majorsCache) {
+            if (major.getMajorCode().equalsIgnoreCase(majorCode)) {
+                return Optional.of(major);
+            }
+        }
+        return Optional.empty();
+    }
 
     private void setSubjectsCoef(OfferDetailsDto dto, Major major) {
         if (dto.getSubjectDetailsMap() != null) {

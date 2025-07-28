@@ -22,7 +22,6 @@ public class UniversityRegionService {
     private UniversityService universityService;
     private static final String FULL_API_URL = "https://vstup.edbo.gov.ua/offers-universities/";
     private final String[] informaticsMajors = {"F1", "F2", "F3", "F4", "F5", "F6", "F7"};
-    private final String[] testMajors = {"B10"};
     private final String[] majorCodes = {
             "A1", "A2", "A3", "A4", "A5", "A6", "A7", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9",
             "B10", "B11", "B12", "B13", "B14", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "D1", "D2",
@@ -60,7 +59,7 @@ public class UniversityRegionService {
                                         wrapper.getUniversities().forEach(universityDto -> universityService.processAndMapUniversity(universityDto, universityRegion));
                                         return Mono.empty();
                                     } else {
-                                        System.out.println("Empty university response for region: " + universityRegion.getRegionCode());
+                                        //System.out.println("Empty university response for region: " + universityRegion.getRegionCode());
                                         return Mono.empty();
                                     }
                                 } catch (Exception e) {
