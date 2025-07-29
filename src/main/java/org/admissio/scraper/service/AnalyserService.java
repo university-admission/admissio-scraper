@@ -193,7 +193,7 @@ public class AnalyserService {
 
     private void analyseContract(Offer offer) {
         List<Application> offerApps = contractApplicationsByOfferId.getOrDefault(
-                offer.getId(),
+               offer.getId(),
                 new ArrayList<>()
         );
 
@@ -379,7 +379,7 @@ public class AnalyserService {
 
         List<Student> students = new ArrayList<>();
         for (int i = 0; i < 10 * offersCount; i++)
-            //students.add(new Student("Студент " + (i + 1)));
+            students.add(new Student("Студент " + (i + 1)));
 
         studentRepository.saveAll(students);
 
