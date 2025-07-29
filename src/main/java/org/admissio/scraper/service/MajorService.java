@@ -13,10 +13,12 @@ import java.util.Optional;
 @Service
 public class MajorService {
     private final MajorRepository majorRepository;
-    private Integer tempKey = 2;
-    private List<Major> majorsCache;
+    public static List<Major> majorsCache;
     private final String[] supportedMajors = {
-            "A2", "A3", "A4", "A5", "A6", "E3", "E4", "E5", "E6", "E7", "E8",
+            "A2", "A3", "A4.04", "A4.05", "A4.06", "A4.07",
+            "A4.08",  "A4.09", "A4.10", "A4.15", "A4.16",
+            "A5", "A6.02", "A6.03", "A6.04", "A6.05",
+            "E3", "E4", "E5", "E6", "E7", "E8",
             "G1", "G2", "G3", "G4", "G5", "G6", "G7",
             "G8", "G9", "G10", "G11", "G12", "G13", "G14", "G15", "G16", "G19",
             "H1", "H2", "H3", "H4", "H5", "H7", "J6",
@@ -30,24 +32,22 @@ public class MajorService {
 
     @PostConstruct
     public void init() {
-        this.majorsCache = majorRepository.findAll();
+        this.majorsCache = (List<Major>) majorRepository.findAll();
     }
 
     public Major addMajor(OfferDetailsDto dto) {
         Major major = new Major();
-        major.setMajorCode(dto.getMajorCode());
-        major.setMajorName(dto.getName());
+        major.setMajorCode(dto.getDetailedMajorCode() != null ? dto.getDetailedMajorCode() : dto.getMajorCode());
+        major.setMajorName(dto.getDetailedName() != null ? dto.getDetailedName() : dto.getName());
+        major.setCompetitionCoef(0d); // Default value
         setSubjectsCoef(dto, major);
-        tempKey++;
-        major.setMajorCodeOld(tempKey); // TODO: Delete column from db
-        major.setCompetitionCoef(0d);
-        if (checkSupportedMajor(dto.getMajorCode())) {
+        if (checkSupportedMajor(major.getMajorCode())) {
             major.setMajorCoef(1.02);
         } else {
             major.setMajorCoef(1d);
         }
 
-        majorRepository.save(major);
+        //majorRepository.save(major);
         majorsCache.add(major);
         return major;
     }
@@ -114,9 +114,5 @@ public class MajorService {
             }
         }
         return false;
-    }
-
-    public Optional<Major> findMajorByCode(String majorCode) {
-        return majorRepository.findByMajorCodeIgnoreCase(majorCode);
     }
 }

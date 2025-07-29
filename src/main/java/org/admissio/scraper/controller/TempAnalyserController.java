@@ -11,24 +11,21 @@ import org.springframework.web.reactive.function.client.WebClient;
 @SpringBootApplication
 @AllArgsConstructor
 public class TempAnalyserController implements CommandLineRunner {
-    AnalyserService analyserService;
-    UniversityRegionService universityRegionService;
+    //AnalyserService analyserService;
+    ScraperService scraperService;
     //private Flyway flyway;
 
     @Override
     public void run(String... args) {
-        /*flyway.clean();
-        flyway.migrate();*/
+//        flyway.clean();
+//        flyway.migrate();
 
         //analyserService.analyse();
 
         System.out.println("Start of scrapping!");
         long startTime = System.currentTimeMillis();
 
-        universityRegionService.scrapeUniversitiesByRegion()
-                .doOnSuccess(voidResult -> System.out.println("Scraping of universities by region completed successfully!"))
-                .doOnError(throwable -> System.err.println("Error while scraping universities by region: " + throwable.getMessage()))
-                .block();
+        scraperService.scrapeAllData();
 
         long totalDurationMillis  = System.currentTimeMillis() - startTime;
         System.out.println("Scraping of universities by region completed successfully!");

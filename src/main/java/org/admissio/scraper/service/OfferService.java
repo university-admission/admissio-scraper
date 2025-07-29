@@ -1,5 +1,6 @@
 package org.admissio.scraper.service;
 
+import jakarta.annotation.PostConstruct;
 import org.admissio.scraper.dto.offer.EdboResponseWrapper;
 import org.admissio.scraper.dto.offer.OfferDetailsDto;
 import org.admissio.scraper.dto.offer.SubjectDetailsDto;
@@ -14,6 +15,9 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -23,42 +27,41 @@ public class OfferService {
     private static final String FULL_API_URL = "https://vstup.edbo.gov.ua/offers-list/";
     private final ObjectMapper jacksonObjectMapper;
     private OfferRepository offerRepository;
+    public static List<Offer> offersCache;
+    private BatchSavingService  batchSavingService;
     private final String highScoreMajorCodes[] = {"C3", "D4", "D8", "D9", "I1", "I2", "I3", "I4", "I8"};
 
     OfferService(ObjectMapper jacksonObjectMapper,
                  MajorService majorService,
-                 OfferRepository offerRepository) {
+                 OfferRepository offerRepository, BatchSavingService batchSavingService) {
         this.webClient = WebClientInsecure.createInsecureWebClient(FULL_API_URL);
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.majorService = majorService;
         this.offerRepository = offerRepository;
+        this.batchSavingService = batchSavingService;
+    }
+
+    @PostConstruct
+    public void init() {
+        this.offersCache = (List<Offer>) offerRepository.findAll();
     }
 
     public void scrapeOffers(String offerIds, University university) {
-        // Logs for debug
-        //System.out.println("Initiating scrape for offers with IDs: " + offerIds + " for University: " + university.getUniversityName() + " (" + university.getUniversityCode() + ")");
+        String rawResponse = sendRequestForRawOffer(offerIds).block();
 
-        Mono<String> rawResponseMono = sendRequestForRawOffer(offerIds);
+        if (rawResponse != null) {
+            try {
+                EdboResponseWrapper edboResponse = jacksonObjectMapper.readValue(rawResponse, EdboResponseWrapper.class);
 
-        rawResponseMono.subscribe(
-                rawResponse -> {
-                    try {
-                        EdboResponseWrapper edboResponse = jacksonObjectMapper.readValue(rawResponse, EdboResponseWrapper.class);
-
-                        if (edboResponse != null && edboResponse.getOffers() != null && !edboResponse.getOffers().isEmpty()) {
-                            //System.out.println("Received EdboResponseWrapper with " + edboResponse.getOffers().size() + " offers for IDs: " + offerIds);
-                            edboResponse.getOffers().forEach(offerDto -> processAndMapOffer(offerDto, university));
-                        } else {
-                            System.out.println("Parsed JSON is empty or null offers list for IDs: " + offerIds);
-                        }
-                    } catch (Exception e) {
-                        System.err.println("Failed to parse raw response as JSON for the batch of IDs [" + offerIds + "]: " + e.getMessage());
-                        e.printStackTrace();
-                    }
-                },
-                error -> System.err.println("Error during raw request or parsing for batch IDs [" + offerIds + "]: " + error.getMessage())
-        );
-
+                if (edboResponse != null && edboResponse.getOffers() != null && !edboResponse.getOffers().isEmpty()) {
+                    edboResponse.getOffers().forEach(offerDto -> processAndMapOffer(offerDto, university));
+                } else {
+                    System.out.println("Parsed JSON is empty or null offers list for IDs: " + offerIds);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to parse raw response as JSON for the batch of IDs [" + offerIds + "]: ");
+            }
+        }
     }
 
 
@@ -70,6 +73,7 @@ public class OfferService {
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .header("X-Requested-With", "XMLHttpRequest")
                 .header("Referer", "https://vstup.edbo.gov.ua")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36")
                 .body(BodyInserters.fromValue(body))
                 .retrieve()
                 .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
@@ -77,22 +81,27 @@ public class OfferService {
                 .bodyToMono(String.class)
                 .doOnError(e -> {
                     System.err.println("=== ERROR IN EDBO WEBCLIENT REQUEST (Raw Body) ===");
-                    e.printStackTrace();
                 });
     }
 
     private void processAndMapOffer(OfferDetailsDto offerDto, University university) {
         //System.out.println("Processing offer DTO with EDBO ID: " + offerDto.getEdboUsid());
 
+        if (isOfferAdded(offerDto.getEdboUsid())) {
+            //System.err.println("Duplicate with id:" + offerDto.getEdboUsid());
+            return;
+        }
+
         Offer offer = new Offer();
 
         offer.setEdboId(offerDto.getEdboUsid());
-        offer.setName(offerDto.getName() != null ? offerDto.getName() : offerDto.getMajorCode());
+        offer.setName(offerDto.getName() != null ? offerDto.getName() : "Не вказано");
         offer.setFaculty(offerDto.getFacultyName() != null ? offerDto.getFacultyName() : "Не вказано");
+        offer.setEducationalProgram(offerDto.getEducationalProgram() != null ? offerDto.getEducationalProgram() : offer.getName());
         offer.setEducationForm(offerDto.getEducationFormName());
         int budgetPlaces = offerDto.getBudgetPlaces() != null ? offerDto.getBudgetPlaces() : 0;
         offer.setBudgetPlaces(budgetPlaces);
-        offer.setContractPlaces(offerDto.getContractPlaces() != null ? offerDto.getContractPlaces() : 0);
+        offer.setContractPlaces(offerDto.getContractPlaces() != null ? offerDto.getContractPlaces() : offerDto.getAllPlaces());
         offer.setQuota1Places(budgetPlaces / 10); // minimum 10% of budget
         offer.setQuota2Places(budgetPlaces / 10); // minimum 10% of budget
 
@@ -101,29 +110,34 @@ public class OfferService {
         if (offer.getQuota2Places() < 1 && budgetPlaces > 0)
             offer.setQuota2Places(1);
 
-        // Convert regionCoefString to Double
+        // Convert regionCoefString and price
         try {
-            if (offerDto.getRegionCoefString() != null) {
+            if (offerDto.getRegionCoefString() != null && offerDto.getPrice() != null) {
                 offer.setRegionCoef(Double.parseDouble(offerDto.getRegionCoefString()));
+                offer.setPrice(Integer.parseInt(offerDto.getPrice()));
             } else {
                 offer.setRegionCoef(1.0); // Default value if not present
+                offer.setPrice(0);
             }
         } catch (NumberFormatException e) {
-            System.err.println("Error parsing regionCoef for ID " + offerDto.getEdboUsid() + ": " + offerDto.getRegionCoefString());
+            System.err.println("Error parsing regionCoef of price for ID " + offerDto.getEdboUsid());
             offer.setRegionCoef(1.0);
+            offer.setPrice(0);
         }
 
+        // Default values
         offer.setAdditionalPoints(0);
+        offer.setMinCompetitionScore(100);
 
         // Extracting min scores from subjectDetailsMap (the 'os' field in JSON)
         setSubjectsMinScore(offerDto, offer);
 
         // Set min score
-        offer.setMinCompetitionScore(100);
+        offer.setMinApplicationScore(100);
 
         for (String code : highScoreMajorCodes) {
             if (offerDto.getMajorCode().equalsIgnoreCase(code)) {
-                offer.setMinCompetitionScore(150);
+                offer.setMinApplicationScore(150);
                 break;
             }
         }
@@ -138,7 +152,7 @@ public class OfferService {
 
         offer.setUniversity(university);
 
-        offerRepository.save(offer);
+        offersCache.add(offer);
 
     }
 
@@ -176,6 +190,9 @@ public class OfferService {
                     case "Бал за успішне закінчення підготовчих курсів закладу освіти":
                         offer.setAdditionalPoints(1);
                         break;
+                    case "Творчий конкурс":
+                        offer.setMinCompetitionScore(subject.getMinScore());
+                        break;
                     case "Мотиваційний лист":
                         break;
                     default:
@@ -186,14 +203,13 @@ public class OfferService {
         }
     }
 
-
-    private Major getMajorByCode(String majorCode) throws Exception {
-        Optional<Major> major = majorService.findMajorByCode(majorCode);
-        if (major.isPresent()) {
-            return major.get();
-        } else {
-            throw new Exception("Major code " + majorCode + " not found in db");
+    private boolean isOfferAdded(Long offerEdboId){
+        for (Offer offer : offersCache) {
+            if (offer.getEdboId().equals(offerEdboId)) {
+                return true;
+            }
         }
+        return false;
     }
 
 }

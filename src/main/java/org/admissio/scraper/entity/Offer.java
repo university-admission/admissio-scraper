@@ -47,6 +47,14 @@ public class Offer {
     private String faculty;
 
     @NonNull
+    @Column(name = "educational_program", nullable = false)
+    private String educationalProgram;
+
+    @NonNull
+    @Column(name = "price", nullable = false)
+    private Integer price;
+
+    @NonNull
     @Column(name = "education_form", nullable = false)
     private String educationForm;
 
@@ -57,12 +65,22 @@ public class Offer {
     @Column(name = "budget_places_count", nullable = false)
     private Integer budgetPlacesCount = 0;
 
+    @Min(0)
+    @Max(200)
+    @Column(name = "min_budget_score", nullable = false)
+    private Double minBudgetScore = 0d;
+
     @NonNull
     @Column(name = "contract_places", nullable = false)
     private Integer contractPlaces;
 
     @Column(name = "contract_places_count", nullable = false)
     private Integer contractPlacesCount = 0;
+
+    @Min(0)
+    @Max(200)
+    @Column(name = "min_contract_score", nullable = false)
+    private Double minContractScore = 0d;
 
     @NonNull
     @Column(name = "quota1_places", nullable = false)
@@ -71,12 +89,22 @@ public class Offer {
     @Column(name = "quota1_places_count", nullable = false)
     private Integer quota1PlacesCount = 0;
 
+    @Min(0)
+    @Max(200)
+    @Column(name = "min_quota1_score", nullable = false)
+    private Double minQuota1Score = 0d;
+
     @NonNull
     @Column(name = "quota2_places", nullable = false)
     private Integer quota2Places;
 
     @Column(name = "quota2_places_count", nullable = false)
     private Integer quota2PlacesCount = 0;
+
+    @Min(0)
+    @Max(200)
+    @Column(name = "min_quota2_score", nullable = false)
+    private Double minQuota2Score = 0d;
 
     @NonNull
     @Column(name = "min_uk_lang_score", nullable = false)
@@ -137,6 +165,12 @@ public class Offer {
     @Min(100)
     @Max(200)
     private Integer minCompetitionScore;
+
+    @NonNull
+    @Column(name = "min_application_score",  nullable = false)
+    @Min(100)
+    @Max(200)
+    private Integer minApplicationScore;
 
     @NonNull
     @Column(name = "additional_points", nullable = false)

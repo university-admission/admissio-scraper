@@ -33,7 +33,8 @@ public class AnalyserService {
 
     private List<Application> allApplications;
     private List<Offer> allOffers;
-    private Map<ApplicationKey, List<Application>> applicationsByKey;
+    private Map<ApplicationKey, List<Application>> budgetApplicationsByKey;
+    private Map<Long, List<Application>> contractApplicationsByOfferId;
     private Map<StudentApplicationKey, List<Application>> studentApplicationsByKey;
 
     @Transactional
@@ -74,7 +75,7 @@ public class AnalyserService {
         }
     }
 
-    private void loadDataToMemory(){
+    private void loadDataToMemory() {
         allOffers = (List<Offer>) offerRepository.findAll();
         Map<Long, Offer> offersById = allOffers.stream()
                 .collect(Collectors.toMap(Offer::getId, o -> o));
@@ -87,7 +88,8 @@ public class AnalyserService {
             app.setOffer(canonicalOffer);
         }
 
-        applicationsByKey = allApplications.stream()
+        budgetApplicationsByKey = allApplications.stream()
+                .filter(Application::getIsBudget)
                 .collect(Collectors.groupingBy(a ->
                                 new ApplicationKey(
                                         a.getOffer().getId(),
@@ -100,6 +102,17 @@ public class AnalyserService {
                                         .toList()
                         )
                 ));
+
+        contractApplicationsByOfferId = allApplications.stream()
+                .filter(app -> !app.getIsBudget())
+                .collect(Collectors.groupingBy(
+                        a -> a.getOffer().getId(),
+                        Collectors.collectingAndThen(
+                                Collectors.toList(),
+                                list -> list.stream()
+                                        .sorted(Comparator.comparingDouble(Application::getScore).reversed())
+                                        .toList()
+                        )));
 
         studentApplicationsByKey = allApplications.stream()
                 .collect(Collectors.groupingBy(a ->
@@ -121,19 +134,71 @@ public class AnalyserService {
     private void analyseData() {
         for (Offer offer : allOffers) {
             for (QuotaType quotaType : QuotaType.values()) {
-                analyseByQuotaType(offer, quotaType);
+                analyseBudgetByQuotaType(offer, quotaType);
+            }
+
+            analyseContract(offer);
+        }
+
+        for (Offer offer : allOffers) {
+            setMinScoreIfFilled(offer, QuotaType.GENERAL);
+            setMinScoreIfFilled(offer, QuotaType.QUOTA_1);
+            setMinScoreIfFilled(offer, QuotaType.QUOTA_2);
+
+            if (offer.getContractPlaces().equals(offer.getContractPlacesCount()) && offer.getContractPlaces() > 0) {
+                List<Application> apps = contractApplicationsByOfferId.getOrDefault(offer.getId(), new ArrayList<>());
+
+                if (offer.getContractPlaces() < apps.size()) {
+                    offer.setMinContractScore(apps.get(offer.getContractPlaces() - 1).getScore());
+                } else {
+                    offer.setMinContractScore(0d);
+                }
+            } else {
+                offer.setMinContractScore(0d);
             }
         }
     }
 
-    private void analyseByQuotaType(Offer offer, QuotaType quotaType){
-        List<Application> offerApps = applicationsByKey.getOrDefault(
+    private void setMinScoreIfFilled(Offer offer, QuotaType quotaType) {
+        int places = getMaxPlaces(offer, quotaType, true);
+        Supplier<Integer> getCount = getGetCount(offer, quotaType, true);
+        Consumer<Double> setScore = getGetMinScore(offer, quotaType);
+
+        if (getCount.get().equals(places) && places > 0) {
+            List<Application> apps = budgetApplicationsByKey.getOrDefault(
+                    new ApplicationKey(offer.getId(), quotaType),
+                    List.of()
+            );
+
+            if (places < apps.size()) {
+                setScore.accept(apps.get(places - 1).getScore());
+            } else {
+                setScore.accept(0d);
+            }
+        } else {
+            setScore.accept(0d);
+        }
+    }
+
+    private void analyseBudgetByQuotaType(Offer offer, QuotaType quotaType) {
+        List<Application> offerApps = budgetApplicationsByKey.getOrDefault(
                 new ApplicationKey(offer.getId(), quotaType),
                 new ArrayList<>()
         );
 
         for (Application application : offerApps) {
             analyseRecursive(application, quotaType);
+        }
+    }
+
+    private void analyseContract(Offer offer) {
+        List<Application> offerApps = contractApplicationsByOfferId.getOrDefault(
+                offer.getId(),
+                new ArrayList<>()
+        );
+
+        for (Application application : offerApps) {
+            analyseRecursive(application, application.getQuotaType());
         }
     }
 
@@ -145,14 +210,14 @@ public class AnalyserService {
         if (application.getIsChecked())
             return;
 
-        if(getCount.get() >= maxPlaces){
+        if (getCount.get() >= maxPlaces) {
             application.setIsChecked(true);
             return;
         }
 
-        Application prevApp = getPrevApplication(application, quotaType);
+        Application prevApp = application.getIsBudget() ? getPrevApplication(application, quotaType) : getPrevApplication(application);
         if (prevApp != null)
-            analyseRecursive(prevApp, quotaType);
+            analyseRecursive(prevApp, prevApp.getQuotaType());
 
         if (getCount.get() >= maxPlaces) {
             application.setIsChecked(true);
@@ -164,30 +229,39 @@ public class AnalyserService {
                 new ArrayList<>()
         );
 
-        if(application.getPriority().equals(studentApplications.getFirst().getPriority())){
+        if (application.getPriority().equals(studentApplications.getFirst().getPriority())) {
+
+            if (getCount.get() >= maxPlaces) {
+                application.setIsChecked(true);
+                return;
+            }
+
             application.setIsCounted(true);
-
             setCount.accept(getCount.get() + 1);
-
             studentApplications.forEach(this::checkApplication);
 
             return;
         }
 
         for (Application studentApplication : studentApplications) {
-            if (studentApplications.stream().anyMatch(Application::getIsCounted) || application.getPriority().equals(studentApplication.getPriority())){
-                if(application.getPriority().equals(studentApplication.getPriority())) {
-                    application.setIsChecked(true);
-                    setCount.accept(getCount.get() + 1);
-                }
-
+            if (studentApplications.stream().anyMatch(Application::getIsCounted)) {
                 studentApplications.forEach(this::checkApplication);
-
                 return;
             }
 
+            if (application.getPriority().equals(studentApplication.getPriority())) {
+                if (getCount.get() >= maxPlaces) {
+                    application.setIsChecked(true);
+                    return;
+                }
 
-            if(studentApplication.getIsChecked())
+                application.setIsChecked(true);
+                setCount.accept(getCount.get() + 1);
+                studentApplications.forEach(this::checkApplication);
+                return;
+            }
+
+            if (studentApplication.getIsChecked())
                 continue;
 
             analyseRecursive(studentApplication, quotaType);
@@ -224,9 +298,9 @@ public class AnalyserService {
 
     private int getMaxPlaces(Offer offer, QuotaType quotaType, boolean isBudget) {
         if (!isBudget)
-            return offer.getBudgetPlaces();
+            return offer.getContractPlaces();
 
-        return switch (quotaType){
+        return switch (quotaType) {
             case GENERAL -> offer.getBudgetPlaces();
             case QUOTA_1 -> offer.getQuota1Places();
             case QUOTA_2 -> offer.getQuota2Places();
@@ -237,7 +311,7 @@ public class AnalyserService {
         if (!isBudget)
             return offer::getContractPlacesCount;
 
-        return switch (quotaType){
+        return switch (quotaType) {
             case GENERAL -> offer::getBudgetPlacesCount;
             case QUOTA_1 -> offer::getQuota1PlacesCount;
             case QUOTA_2 -> offer::getQuota2PlacesCount;
@@ -248,15 +322,23 @@ public class AnalyserService {
         if (!isBudget)
             return offer::setContractPlacesCount;
 
-        return switch (quotaType){
+        return switch (quotaType) {
             case GENERAL -> offer::setBudgetPlacesCount;
             case QUOTA_1 -> offer::setQuota1PlacesCount;
             case QUOTA_2 -> offer::setQuota2PlacesCount;
         };
     }
 
+    private Consumer<Double> getGetMinScore(Offer offer, QuotaType quotaType) {
+        return switch (quotaType) {
+            case GENERAL -> offer::setMinBudgetScore;
+            case QUOTA_1 -> offer::setMinQuota1Score;
+            case QUOTA_2 -> offer::setMinQuota2Score;
+        };
+    }
+
     private Application getPrevApplication(Application application, QuotaType quotaType) {
-        List<Application> applications = applicationsByKey.getOrDefault(
+        List<Application> applications = budgetApplicationsByKey.getOrDefault(
                 new ApplicationKey(application.getOffer().getId(), quotaType),
                 new ArrayList<>()
         );
@@ -265,29 +347,39 @@ public class AnalyserService {
         return index > 0 ? applications.get(index - 1) : null;
     }
 
-    private void setData(){
+    private Application getPrevApplication(Application application) {
+        List<Application> applications = contractApplicationsByOfferId.getOrDefault(
+                application.getOffer().getId(),
+                new ArrayList<>()
+        );
+
+        int index = applications.indexOf(application);
+        return index > 0 ? applications.get(index - 1) : null;
+    }
+
+    private void setData() {
         List<Major> majors = (List<Major>) majorRepository.findAll();
         List<University> universities = (List<University>) universityRepository.findAll();
 
         int offersCount = majors.size() * universities.size();
 
         int count = 1;
-        for( Major major : majors){
-            for(University university : universities){
+        for (Major major : majors) {
+            for (University university : universities) {
                 Integer minScore = random.nextInt(100, 130);
-                offerRepository.save(new Offer(1L, "Пропозиція" + count, major, university, "ФІ", "Денна",
-                        random.nextInt(offersCount / 2, offersCount),
-                        random.nextInt(offersCount / 2, offersCount),
-                        random.nextInt(offersCount, offersCount * 2) / 10,
-                        random.nextInt(offersCount, offersCount * 2) / 10,
-                        minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, 0, 1d));
+                offerRepository.save(new Offer(1L, "Пропозиція " + count, major, university, "ФІ", "1", 1, "Денна",
+                        random.nextInt(1, offersCount),
+                        random.nextInt(1, offersCount),
+                        Math.max(1, random.nextInt(offersCount) / 10),
+                        Math.max(1, random.nextInt(offersCount) / 10),
+                        minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, minScore, 0, 1d));
                 count++;
             }
         }
 
         List<Student> students = new ArrayList<>();
         for (int i = 0; i < 10 * offersCount; i++)
-            students.add(new Student("Студент " + (i+1)));
+            //students.add(new Student("Студент " + (i + 1)));
 
         studentRepository.saveAll(students);
 
@@ -304,7 +396,7 @@ public class AnalyserService {
             List<Offer> offers = (List<Offer>) offerRepository.findAll();
             Collections.shuffle(offers);
 
-            for (int i = 0; i < priorities.size() - 2; i++){
+            for (int i = 0; i < priorities.size() - 2; i++) {
                 int priority = priorities.get(i);
                 if (priority > 5)
                     applicationRepository.save(new Application(student, offers.get(i), score, score, priority, false, quotaType));

@@ -8,8 +8,6 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface MajorRepository extends JpaRepository<Major, Long> {
-
-    Optional<Major> findByMajorCodeIgnoreCase(String majorCode);
+public interface MajorRepository extends CrudRepository<Major, Long> {
 
 }

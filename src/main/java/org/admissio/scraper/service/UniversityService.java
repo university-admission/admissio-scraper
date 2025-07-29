@@ -15,7 +15,7 @@ import java.util.Optional;
 public class UniversityService {
     private OfferService offerService;
     private UniversityRepository universityRepository;
-    private List<University> universitiesCache;
+    public static List<University> universitiesCache;
 
     UniversityService(UniversityRepository universityRepository, OfferService offerService) {
         this.universityRepository = universityRepository;
@@ -41,7 +41,7 @@ public class UniversityService {
                 uni.setUniversityCode(universityDto.getUid());
                 uni.setUniversityName(universityDto.getUn());
                 uni.setUniversityRegion(universityRegion);
-                universityRepository.save(uni);
+                //universityRepository.save(uni);
                 universitiesCache.add(uni);
 
                 offerService.scrapeOffers(universityDto.getIds(), uni);
@@ -50,7 +50,6 @@ public class UniversityService {
 
         } catch (Exception e) {
             System.err.println("Error mapping UniversityDto: " + e.getMessage());
-            e.printStackTrace();
         }
 
     }

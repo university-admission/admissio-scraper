@@ -24,6 +24,10 @@ public class Student {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
+    @NonNull
+    @Column(name= "raw_score", nullable = false)
+    private Double rawScore;
+
     @JsonIgnore
     @OneToMany(mappedBy = "student")
     private Set<Application> applications;

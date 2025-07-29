@@ -15,11 +15,17 @@ public class OfferDetailsDto {
     @JsonProperty("ssn") // Speciality name
     private String name; // Corresponds to Offer.name (or part of it)
 
-    @JsonProperty("ssc") // Full name with code, useful if 'ssn' is too short
-    private String majorCode;
+    @JsonProperty("szn") // Detailed major name
+    private String detailedName; // Corresponds to Major.name
 
-    @JsonProperty("szc")
-    private String detailedMajorCode;
+    @JsonProperty("spn") // Education program
+    private String educationalProgram; // Corresponds to Offer.educationalProgram
+
+    @JsonProperty("ssc") // Code
+    private String majorCode; // Corresponds to Offer.Major
+
+    @JsonProperty("szc") // Full code
+    private String detailedMajorCode; // Corresponds to Major.Major
 
     @JsonProperty("un") // University name
     private String universityName;
@@ -32,6 +38,12 @@ public class OfferDetailsDto {
 
     @JsonProperty("efn") // Education Form name (e.g., "Денна")
     private String educationFormName; // Corresponds to Offer.educationForm
+
+    @JsonProperty("price") // price for a year
+    private String price; // Corresponds to Offer.price
+
+    @JsonProperty("ol")
+    private Integer allPlaces;
 
     @JsonProperty("ox") // Budget places
     private Integer budgetPlaces; // Corresponds to Offer.budgetPlaces

@@ -31,10 +31,6 @@ public class Major {
     private String majorCode;
 
     @NonNull
-    @Column(name = "major_code_old", nullable = false, unique = true)
-    private Integer majorCodeOld;
-
-    @NonNull
     @Column(name = "uk_lang_coef", nullable = false)
     @Min(0)
     @Max(1)
