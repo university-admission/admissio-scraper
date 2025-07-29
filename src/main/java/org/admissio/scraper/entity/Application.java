@@ -34,8 +34,6 @@ public class Application {
 
     @Column(name = "raw_score", nullable = false)
     @NonNull
-    @Min(0)
-    @Max(200)
     private Double rawScore;
 
     @Column(name = "score", nullable = false)
