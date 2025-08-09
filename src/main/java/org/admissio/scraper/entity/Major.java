@@ -90,6 +90,9 @@ public class Major {
     @Max(1)
     private Double competitionCoef;
 
+    @Column(name = "interview_coef", nullable = true)
+    private Double interviewCoef;
+
     @NonNull
     @Column(name = "major_coef", nullable = false)
     @Max(2)

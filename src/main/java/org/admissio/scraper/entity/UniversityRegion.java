@@ -27,6 +27,10 @@ public class UniversityRegion {
     @Column(name = "region_code", nullable = false)
     private Integer regionCode;
 
+    @NonNull
+    @Column(name = "region_code_osvita",  nullable = false)
+    private Integer regionCodeOsvita;
+
     @JsonIgnore
     @OneToMany(mappedBy = "universityRegion")
     private Set<University> universities;

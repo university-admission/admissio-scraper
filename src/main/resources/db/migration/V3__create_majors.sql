@@ -12,5 +12,6 @@ CREATE TABLE majors (
     physics_coef DOUBLE PRECISION NOT NULL,
     chemistry_coef DOUBLE PRECISION NOT NULL,
     competition_coef DOUBLE PRECISION NOT NULL,
+    interview_coef DOUBLE PRECISION,
     major_coef DOUBLE PRECISION NOT NULL CHECK (major_coef >= 1 AND major_coef <= 2)
 );

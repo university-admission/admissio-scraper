@@ -30,6 +30,7 @@ CREATE TABLE offers (
     min_physics_score INTEGER NOT NULL CHECK (min_physics_score BETWEEN 100 AND 200),
     min_chemistry_score INTEGER NOT NULL CHECK (min_chemistry_score BETWEEN 100 AND 200),
     min_competition_score INTEGER NOT NULL CHECK (min_competition_score BETWEEN 100 AND 200),
+    min_interview_score INTEGER,
     min_application_score INTEGER NOT NULL CHECK (min_application_score BETWEEN 100 AND 200),
     additional_points INTEGER NOT NULL CHECK (additional_points >= 0),
     region_coef DOUBLE PRECISION NOT NULL CHECK (region_coef BETWEEN 1 AND 2)

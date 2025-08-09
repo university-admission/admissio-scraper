@@ -10,6 +10,8 @@ public class ScraperService {
     @NonNull
     private UniversityRegionService universityRegionService;
     @NonNull
+    private OfferService offerService;
+    @NonNull
     private BatchSavingService batchSavingService;
     @NonNull
     private ApplicationService applicationService;
@@ -29,25 +31,17 @@ public class ScraperService {
 
     public void updateApplications(){
         applicationService.scrapeApplications();
-        batchSavingService.saveStudentsInBatch(StudentService.studentsCache);
-        batchSavingService.saveApplicationsInBatch(ApplicationService.applicationsCache);
-        clearCache();
     }
 
-    public void scrapeAllData(){
-        universityRegionService.scrapeUniversitiesByRegion(test);
-        batchSavingService.saveUniversitiesInBatch(UniversityService.universitiesCache);
-        batchSavingService.saveMajorsInBatch(MajorService.majorsCache);
-        batchSavingService.saveOffersInBatch(OfferService.offersCache);
-        updateApplications();
+    public void scrapeBaseData(){
+//        universityRegionService.scrapeUniversitiesByRegion();
+//        batchSavingService.saveUniversitiesInBatch(UniversityService.getUniversitiesCacheList());
+//        offerService.scrapeOffers();
+//        clearCache();
     }
 
     private void clearCache(){
-        ApplicationService.applicationsCache.clear();
-        StudentService.studentsCache.clear();
-        OfferService.offersCache.clear();
-        MajorService.majorsCache.clear();
-        UniversityService.universitiesCache.clear();
+        //TODO: if needed
     }
 
 }

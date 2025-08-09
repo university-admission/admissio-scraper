@@ -7,13 +7,12 @@ import org.admissio.scraper.entity.Major;
 import org.admissio.scraper.repository.MajorRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class MajorService {
     private final MajorRepository majorRepository;
-    public static List<Major> majorsCache;
+    private static Map<String, Major> majorsCache = new HashMap<>();
     private final String[] supportedMajors = {
             "A2", "A3", "A4.04", "A4.05", "A4.06", "A4.07",
             "A4.08",  "A4.09", "A4.10", "A4.15", "A4.16",
@@ -32,7 +31,9 @@ public class MajorService {
 
     @PostConstruct
     public void init() {
-        this.majorsCache = (List<Major>) majorRepository.findAll();
+        for (Major major : majorRepository.findAll()) {
+            majorsCache.put(major.getMajorCode(), major);
+        }
     }
 
     public Major addMajor(OfferDetailsDto dto) {
@@ -47,18 +48,16 @@ public class MajorService {
             major.setMajorCoef(1d);
         }
 
-        //majorRepository.save(major);
-        majorsCache.add(major);
-        return major;
-    }
-
-    public Optional<Major> getMajor(String majorCode) {
-        for (Major major : majorsCache) {
-            if (major.getMajorCode().equalsIgnoreCase(majorCode)) {
-                return Optional.of(major);
-            }
+        try {
+            majorsCache.put(major.getMajorCode(), major);
+            majorRepository.save(major);
+        }catch (Exception e){
+            System.err.println("Error while saving major for offedId: " + dto.getEdboUsid());
+            e.printStackTrace();
+            return null;
         }
-        return Optional.empty();
+
+        return major;
     }
 
     private void setSubjectsCoef(OfferDetailsDto dto, Major major) {
@@ -95,6 +94,9 @@ public class MajorService {
                     case "Творчий конкурс":
                         major.setCompetitionCoef(subject.getSubjectCoef());
                         break;
+                    case "Співбесіда":
+                        major.setInterviewCoef(subject.getSubjectCoef());
+                        break;
                     case "Бал за успішне закінчення підготовчих курсів закладу освіти":
                         break;
                     case "Мотиваційний лист":
@@ -105,6 +107,14 @@ public class MajorService {
                 }
             }
         }
+    }
+
+    public static List<Major> getMajorsCacheList() {
+        return new ArrayList<>(majorsCache.values());
+    }
+
+    public Major getMajor(String majorCode) {
+        return majorsCache.get(majorCode);
     }
 
     private boolean checkSupportedMajor(String majorCode) {

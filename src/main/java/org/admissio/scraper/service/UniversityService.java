@@ -1,66 +1,53 @@
 package org.admissio.scraper.service;
 
 import jakarta.annotation.PostConstruct;
-import org.admissio.scraper.dto.university.UniversityDto;
+import org.admissio.scraper.dto.university.OsvitaUniversityDto;
 import org.admissio.scraper.entity.University;
 import org.admissio.scraper.entity.UniversityRegion;
 import org.admissio.scraper.repository.UniversityRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 @Service
 public class UniversityService {
-    private OfferService offerService;
     private UniversityRepository universityRepository;
-    public static List<University> universitiesCache;
+    private final static Map<Integer, University> universitiesCache = new HashMap<>();
 
-    UniversityService(UniversityRepository universityRepository, OfferService offerService) {
+    UniversityService(UniversityRepository universityRepository) {
         this.universityRepository = universityRepository;
-        this.offerService = offerService;
     }
 
     @PostConstruct
     public void init() {
-        this.universitiesCache = (List<University>) universityRepository.findAll();
+        List<University> universities = (List<University>) universityRepository.findAll();
+        for (University university : universities) {
+            universitiesCache.put(university.getUniversityCode(), university);
+        }
     }
 
-    public void processAndMapUniversity(UniversityDto universityDto, UniversityRegion universityRegion) {
-        try {
+    public void processAndMapUniversity(OsvitaUniversityDto uniDto, UniversityRegion universityRegion) {
 
-            Optional<University> universityOptional = findUniversityByUniversityCode(universityDto.getUid());
+        if (!universitiesCache.containsKey(uniDto.getUniversityId())) {
+            University uni = new University();
 
-            if (universityOptional.isPresent()) {
-                offerService.scrapeOffers(universityDto.getIds(), universityOptional.get());
-            } else {
-
-                University uni = new University();
-
-                uni.setUniversityCode(universityDto.getUid());
-                uni.setUniversityName(universityDto.getUn());
-                uni.setUniversityRegion(universityRegion);
-                //universityRepository.save(uni);
-                universitiesCache.add(uni);
-
-                offerService.scrapeOffers(universityDto.getIds(), uni);
-            }
-
-
-        } catch (Exception e) {
-            System.err.println("Error mapping UniversityDto: " + e.getMessage());
+            uni.setUniversityCode(uniDto.getUniversityId());
+            uni.setUniversityName(uniDto.getUniversityFullName());
+            uni.setUniversityRegion(universityRegion);
+            universitiesCache.put(uni.getUniversityCode(), uni);
         }
 
     }
 
-    private Optional<University> findUniversityByUniversityCode(Integer universityCode) {
-        for (University university : universitiesCache) {
-            if (university.getUniversityCode().equals(universityCode)) {
-                return Optional.of(university);
-            }
-        }
-        return Optional.empty();
+    public static University getUniversityByCode(Integer code) {
+        return universitiesCache.get(code);
+    }
+
+    public static List<University> getUniversitiesCacheList() {
+        return new ArrayList<>(universitiesCache.values());
     }
 
 }

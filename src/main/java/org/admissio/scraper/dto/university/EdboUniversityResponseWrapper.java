@@ -6,5 +6,5 @@ import java.util.List;
 
 @Data
 public class EdboUniversityResponseWrapper {
-    private List<UniversityDto> universities;
+    private List<EdboUniversityDto> universities;
 }

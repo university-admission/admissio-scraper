@@ -166,6 +166,9 @@ public class Offer {
     @Max(200)
     private Integer minCompetitionScore;
 
+    @Column(name = "min_interview_score", nullable = true)
+    private Integer minInterviewScore;
+
     @NonNull
     @Column(name = "min_application_score",  nullable = false)
     @Min(100)

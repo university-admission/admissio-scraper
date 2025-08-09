@@ -3,6 +3,7 @@ package org.admissio.scraper.controller;
 import lombok.AllArgsConstructor;
 import org.admissio.scraper.entity.UniversityRegion;
 import org.admissio.scraper.service.*;
+import org.admissio.scraper.utils.ApiHashDecryption;
 import org.flywaydb.core.Flyway;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -13,6 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class TempAnalyserController implements CommandLineRunner {
     //AnalyserService analyserService;
     ScraperService scraperService;
+    ApplicationServiceOsvita applicationServiceOsvita;
     //private Flyway flyway;
 
     @Override
@@ -25,7 +27,10 @@ public class TempAnalyserController implements CommandLineRunner {
         System.out.println("Start of scrapping!");
         long startTime = System.currentTimeMillis();
 
-        scraperService.scrapeAllData();
+        scraperService.scrapeBaseData();
+        //applicationServiceOsvita.printResponse();
+        //applicationServiceOsvita.printResponseUniversities();
+
 
         long totalDurationMillis  = System.currentTimeMillis() - startTime;
         System.out.println("Scraping of universities by region completed successfully!");
