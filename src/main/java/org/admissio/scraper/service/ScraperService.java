@@ -36,12 +36,7 @@ public class ScraperService {
     public void scrapeBaseData(){
 //        universityRegionService.scrapeUniversitiesByRegion();
 //        batchSavingService.saveUniversitiesInBatch(UniversityService.getUniversitiesCacheList());
-//        offerService.scrapeOffers();
-//        clearCache();
-    }
-
-    private void clearCache(){
-        //TODO: if needed
+        offerService.scrapeOffers();
     }
 
 }

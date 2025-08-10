@@ -27,10 +27,8 @@ public class TempAnalyserController implements CommandLineRunner {
         System.out.println("Start of scrapping!");
         long startTime = System.currentTimeMillis();
 
+        //scraperService.scrapeBaseData();
         scraperService.scrapeBaseData();
-        //applicationServiceOsvita.printResponse();
-        //applicationServiceOsvita.printResponseUniversities();
-
 
         long totalDurationMillis  = System.currentTimeMillis() - startTime;
         System.out.println("Scraping of universities by region completed successfully!");

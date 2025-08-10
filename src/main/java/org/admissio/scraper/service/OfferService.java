@@ -34,7 +34,7 @@ public class OfferService {
     private final ObjectMapper jacksonObjectMapper;
     private OfferRepository offerRepository;
     private BatchSavingService batchSavingService;
-    private static Map<Long, Offer> offersCache = new HashMap<>();
+    private static Set<Long> offerIds = new HashSet<>();
     private static List<Offer> offersBatch = new ArrayList<>();
     private int savedOffersCounter = 0;
     private int duplicateOffersCounter = 0;
@@ -50,9 +50,8 @@ public class OfferService {
 
     @PostConstruct
     public void init() {
-        List<Offer> offers = (List<Offer>) offerRepository.findAll();
-        for (Offer offer : offers) {
-            offersCache.put(offer.getEdboId(), offer);
+        for (Offer offer : offerRepository.findAll()) {
+            offerIds.add(offer.getEdboId());
         }
     }
 
@@ -134,7 +133,7 @@ public class OfferService {
             return;
         }
 
-        if (offersCache.get(offerDto.getEdboUsid()) != null) {
+        if (offerIds.contains(offerDto.getEdboUsid())) {
             System.err.println("Duplicate with id:" + offerDto.getEdboUsid());
             duplicateOffersCounter++;
             return;
@@ -228,7 +227,7 @@ public class OfferService {
 
         offer.setUniversity(uni);
 
-        offersCache.put(offer.getEdboId(), offer);
+        offerIds.add(offer.getEdboId());
         offersBatch.add(offer);
         savedOffersCounter++;
 
@@ -359,10 +358,6 @@ public class OfferService {
             e.printStackTrace();
             return null;
         }
-    }
-
-    public static List<Offer> getOffersCacheList() {
-        return new ArrayList<>(offersCache.values());
     }
 
 }

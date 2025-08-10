@@ -7,31 +7,43 @@ import org.admissio.scraper.entity.Student;
 import org.admissio.scraper.repository.StudentRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @AllArgsConstructor
 public class StudentService {
     @NonNull
     private StudentRepository studentRepository;
-    public static List<Student> studentsCache;
+    public static Map<String, Student> studentsCache = new HashMap<>();
 
     @PostConstruct
     public void init(){
-        this.studentsCache = (List<Student>) studentRepository.findAll();
+        for (Student student : studentRepository.findAll()) {
+            String key = generateStudentKey(student.getFullName(), student.getRawScore());
+            studentsCache.put(key, student);
+        }
     }
 
     public Student getOrCreateStudent(String fullName, Double rawScoreSum){
-        for (Student student : studentsCache){
-            if (student.getFullName().equalsIgnoreCase(fullName) &&  student.getRawScore().equals(rawScoreSum)){
-                return student;
-            }
+        String key = generateStudentKey(fullName, rawScoreSum);
+
+        if (studentsCache.containsKey(key)){
+            return studentsCache.get(key);
         }
+
         Student newStudent = new Student();
         newStudent.setFullName(fullName);
         newStudent.setRawScore(rawScoreSum);
-        studentsCache.add(newStudent);
+
+        studentsCache.put(key, newStudent);
+        studentRepository.save(newStudent);
         return newStudent;
+    }
+
+    private String generateStudentKey(String fullName, Double rawScore) {
+        return fullName.toLowerCase() + "_" + rawScore;
     }
 
 }
