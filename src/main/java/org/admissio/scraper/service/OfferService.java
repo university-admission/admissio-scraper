@@ -98,7 +98,7 @@ public class OfferService {
         offer.setName(offerDto.getName() != null ? offerDto.getName() : "Не вказано");
         offer.setFaculty(offerDto.getFacultyName() != null ? offerDto.getFacultyName() : "Не вказано");
         offer.setEducationalProgram(offerDto.getEducationalProgram() != null ? offerDto.getEducationalProgram() : offer.getName());
-        offer.setEducationForm(offerDto.getEducationFormName());
+        //offer.setEducationForm(offerDto.getEducationFormName());
         int budgetPlaces = offerDto.getBudgetPlaces() != null ? offerDto.getBudgetPlaces() : 0;
         offer.setBudgetPlaces(budgetPlaces);
         offer.setContractPlaces(offerDto.getContractPlaces() != null ? offerDto.getContractPlaces() : offerDto.getAllPlaces());

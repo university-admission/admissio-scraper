@@ -367,7 +367,9 @@ public class AnalyserService {
         for (Major major : majors) {
             for (University university : universities) {
                 Integer minScore = random.nextInt(100, 130);
-                offerRepository.save(new Offer(1L, "Пропозиція " + count, major, university, "ФІ", "1", 1, "Денна",
+                List<EducationForm> educationForms = new ArrayList<>(List.of(EducationForm.values()));
+                offerRepository.save(new Offer(1L, "Пропозиція " + count, major, university, "ФІ", "1", 1,
+                        educationForms.get(random.nextInt(educationForms.size())),
                         random.nextInt(1, offersCount),
                         random.nextInt(1, offersCount),
                         Math.max(1, random.nextInt(offersCount) / 10),
@@ -398,10 +400,21 @@ public class AnalyserService {
 
             for (int i = 0; i < priorities.size() - 2; i++) {
                 int priority = priorities.get(i);
-                if (priority > 5)
+                if (priority > 5) {
                     applicationRepository.save(new Application(student, offers.get(i), score, score, priority, false, quotaType));
-                else
+                    switch (quotaType){
+                        case GENERAL -> offers.get(i).setBudgetApplications(offers.get(i).getBudgetApplications() + 1);
+                        case QUOTA_1 -> offers.get(i).setQuota1Applications(offers.get(i).getQuota1Applications() + 1);
+                        case QUOTA_2 -> offers.get(i).setQuota2Applications(offers.get(i).getQuota2Applications() + 1);
+                        default -> {
+                            return;
+                        }
+                    }
+                }
+                else {
                     applicationRepository.save(new Application(student, offers.get(i), score, score, priority, true, quotaType));
+                    offers.get(i).setContractApplications(offers.get(i).getContractApplications() + 1);
+                }
             }
         }
     }
