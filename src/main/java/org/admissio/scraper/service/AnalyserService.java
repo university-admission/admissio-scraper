@@ -367,7 +367,9 @@ public class AnalyserService {
         for (Major major : majors) {
             for (University university : universities) {
                 Integer minScore = random.nextInt(100, 130);
-                offerRepository.save(new Offer(1L, "Пропозиція " + count, major, university, "ФІ", "1", 1, "Денна",
+                List<EducationForm> educationForms = new ArrayList<>(List.of(EducationForm.values()));
+                offerRepository.save(new Offer(1L, "Пропозиція " + count, major, university, "ФІ", "1", 1,
+                        educationForms.get(random.nextInt(educationForms.size())),
                         random.nextInt(1, offersCount),
                         random.nextInt(1, offersCount),
                         Math.max(1, random.nextInt(offersCount) / 10),

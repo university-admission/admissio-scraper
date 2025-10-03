@@ -56,7 +56,8 @@ public class Offer {
 
     @NonNull
     @Column(name = "education_form", nullable = false)
-    private String educationForm;
+    @Enumerated(EnumType.STRING)
+    private EducationForm educationForm;
 
     @NonNull
     @Column(name = "budget_places", nullable = false)
