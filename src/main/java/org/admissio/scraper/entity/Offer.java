@@ -63,6 +63,10 @@ public class Offer {
     @Column(name = "budget_places", nullable = false)
     private Integer budgetPlaces;
 
+    @NonNull
+    @Column(name = "budget_applications", nullable = false)
+    private Integer budgetApplications = 0;
+
     @Column(name = "budget_places_count", nullable = false)
     private Integer budgetPlacesCount = 0;
 
@@ -74,6 +78,10 @@ public class Offer {
     @NonNull
     @Column(name = "contract_places", nullable = false)
     private Integer contractPlaces;
+
+    @NonNull
+    @Column(name = "contract_applications", nullable = false)
+    private Integer contractApplications = 0;
 
     @Column(name = "contract_places_count", nullable = false)
     private Integer contractPlacesCount = 0;
@@ -87,6 +95,10 @@ public class Offer {
     @Column(name = "quota1_places", nullable = false)
     private Integer quota1Places;
 
+    @NonNull
+    @Column(name = "quota1_applications", nullable = false)
+    private Integer quota1Applications = 0;
+
     @Column(name = "quota1_places_count", nullable = false)
     private Integer quota1PlacesCount = 0;
 
@@ -98,6 +110,10 @@ public class Offer {
     @NonNull
     @Column(name = "quota2_places", nullable = false)
     private Integer quota2Places;
+
+    @NonNull
+    @Column(name = "quota2_applications", nullable = false)
+    private Integer quota2Applications = 0;
 
     @Column(name = "quota2_places_count", nullable = false)
     private Integer quota2PlacesCount = 0;
