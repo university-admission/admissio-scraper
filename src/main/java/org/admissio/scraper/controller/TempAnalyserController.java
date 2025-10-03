@@ -13,12 +13,12 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class TempAnalyserController implements CommandLineRunner {
     AnalyserService analyserService;
     ScraperService scraperService;
-    private Flyway flyway;
+    //private Flyway flyway;
 
     @Override
     public void run(String... args) {
-        flyway.clean();
-        flyway.migrate();
+        //flyway.clean();
+        //flyway.migrate();
 
         analyserService.analyse();
 
