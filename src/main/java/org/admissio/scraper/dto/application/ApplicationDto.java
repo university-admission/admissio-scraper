@@ -11,7 +11,6 @@ import java.util.List;
 @Data
 public class ApplicationDto {
 
-    // Для поля score
     @JsonProperty("kv")
     private Double score;
 
@@ -19,31 +18,29 @@ public class ApplicationDto {
     @JsonProperty("p")
     private String priorityAndBudgetRaw; // Наприклад: "3 (Б)" або "2 (К)"
 
-    // Для поля fio
     @JsonProperty("fio")
-    private String studentFullName; // Відповідає полю fullName у Student
+    private String studentFullName;
 
     // Для поля rawScore та quotaType
     @JsonProperty("rss")
     private List<RssEntryDto> rssEntries;
 
-    // Додаткові поля з JSON, які можуть бути корисними для налагодження або майбутнього використання
     @JsonProperty("n")
-    private Integer orderNumber; // Поле 'n' у JSON
+    private Integer orderNumber;
     @JsonProperty("prsid")
-    private Integer prsId; // Поле 'prsid' у JSON
+    private Integer prsId;
     @JsonProperty("ptid")
-    private Integer ptId; // Поле 'ptid' у JSON
+    private Integer ptId;
     @JsonProperty("pa")
-    private Integer pa; // Поле 'pa' у JSON
+    private Integer pa;
     @JsonProperty("d")
-    private Integer d; // Поле 'd' у JSON
+    private Integer d;
     @JsonProperty("cp")
-    private Integer cp; // Поле 'cp' у JSON
+    private Integer cp;
     @JsonProperty("cpt")
-    private String cpText; // Поле 'cpt' у JSON
+    private String cpText;
     @JsonProperty("cpd")
-    private String cpDate; // Поле 'cpd' у JSON
+    private String cpDate;
     @JsonProperty("artid")
-    private Integer artId; // Поле 'artid' у JSON
+    private Integer artId;
 }

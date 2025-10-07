@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class SubjectDetailsDto {
     @JsonProperty("sn")
-    private String subjectName; // e.g., "Українська мова", "Математика"
+    private String subjectName;
     @JsonProperty("mv")
     private Integer minScore; // Minimum score for this subject
     @JsonProperty("k")

@@ -27,11 +27,10 @@ public class TempAnalyserController implements CommandLineRunner {
         System.out.println("Start of scrapping!");
         long startTime = System.currentTimeMillis();
 
-        //scraperService.scrapeBaseData();
         scraperService.scrapeBaseData();
 
         long totalDurationMillis  = System.currentTimeMillis() - startTime;
-        System.out.println("Scraping of universities by region completed successfully!");
+        System.out.println("Scraping completed successfully!");
         long hours = totalDurationMillis / (1000 * 60 * 60);
         long minutes = (totalDurationMillis % (1000 * 60 * 60)) / (1000 * 60);
         long seconds = ((totalDurationMillis % (1000 * 60 * 60)) % (1000 * 60)) / 1000;
