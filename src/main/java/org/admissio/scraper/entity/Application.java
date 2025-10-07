@@ -65,4 +65,7 @@ public class Application {
 
     @Column(name = "is_checked", nullable = false)
     private Boolean isChecked = false;
+
+    @Column(name = "is_cancelled", nullable = false)
+    private Boolean isCancelled = false;
 }

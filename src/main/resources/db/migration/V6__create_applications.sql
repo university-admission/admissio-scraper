@@ -9,5 +9,6 @@ CREATE TABLE applications (
     quote_type VARCHAR(255) NOT NULL,
     is_actual BOOLEAN NOT NULL DEFAULT FALSE,
     is_counted BOOLEAN NOT NULL DEFAULT FALSE,
-    is_checked BOOLEAN NOT NULL DEFAULT FALSE
+    is_checked BOOLEAN NOT NULL DEFAULT FALSE,
+    is_cancelled BOOLEAN NOT NULL DEFAULT FALSE
 );

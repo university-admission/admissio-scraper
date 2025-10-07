@@ -1,7 +1,6 @@
 package org.admissio.scraper.controller;
 
 import lombok.AllArgsConstructor;
-import org.admissio.scraper.entity.UniversityRegion;
 import org.admissio.scraper.service.*;
 import org.admissio.scraper.utils.ApiHashDecryption;
 import org.flywaydb.core.Flyway;
@@ -15,19 +14,19 @@ public class TempAnalyserController implements CommandLineRunner {
     //AnalyserService analyserService;
     ScraperService scraperService;
     ApplicationServiceOsvita applicationServiceOsvita;
-    //private Flyway flyway;
+    private Flyway flyway;
 
     @Override
     public void run(String... args) {
-//        flyway.clean();
-//        flyway.migrate();
+        flyway.clean();
+        flyway.migrate();
 
         //analyserService.analyse();
 
         System.out.println("Start of scrapping!");
         long startTime = System.currentTimeMillis();
 
-        scraperService.scrapeBaseData();
+        //scraperService.scrapeBaseData();
 
         long totalDurationMillis  = System.currentTimeMillis() - startTime;
         System.out.println("Scraping completed successfully!");
