@@ -118,7 +118,7 @@ public class AnalyserService {
                 .collect(Collectors.groupingBy(a ->
                                 new StudentApplicationKey(
                                         a.getStudent().getId(),
-                                        a.getRawScore(),
+                                        a.getStudent().getRawScore(),
                                         a.getQuotaType()
                                 ),
                         Collectors.collectingAndThen(
@@ -225,7 +225,7 @@ public class AnalyserService {
         }
 
         List<Application> studentApplications = studentApplicationsByKey.getOrDefault(
-                new StudentApplicationKey(application.getStudent().getId(), application.getRawScore(), quotaType),
+                new StudentApplicationKey(application.getStudent().getId(), application.getStudent().getRawScore(), quotaType),
                 new ArrayList<>()
         );
 
@@ -277,7 +277,7 @@ public class AnalyserService {
         }
 
         List<Application> studentApps = studentApplicationsByKey.getOrDefault(
-                new StudentApplicationKey(application.getStudent().getId(), application.getRawScore(), application.getQuotaType()),
+                new StudentApplicationKey(application.getStudent().getId(), application.getStudent().getRawScore(), application.getQuotaType()),
                 Collections.emptyList()
         );
 
@@ -401,7 +401,7 @@ public class AnalyserService {
             for (int i = 0; i < priorities.size() - 2; i++) {
                 int priority = priorities.get(i);
                 if (priority > 5) {
-                    applicationRepository.save(new Application(student, offers.get(i), score, score, priority, false, quotaType));
+                    applicationRepository.save(new Application(student, offers.get(i), score, priority, false, quotaType));
                     switch (quotaType){
                         case GENERAL -> offers.get(i).setBudgetApplications(offers.get(i).getBudgetApplications() + 1);
                         case QUOTA_1 -> offers.get(i).setQuota1Applications(offers.get(i).getQuota1Applications() + 1);
@@ -412,7 +412,7 @@ public class AnalyserService {
                     }
                 }
                 else {
-                    applicationRepository.save(new Application(student, offers.get(i), score, score, priority, true, quotaType));
+                    applicationRepository.save(new Application(student, offers.get(i), score, priority, true, quotaType));
                     offers.get(i).setContractApplications(offers.get(i).getContractApplications() + 1);
                 }
             }
