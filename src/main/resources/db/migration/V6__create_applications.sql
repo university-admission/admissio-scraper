@@ -2,11 +2,10 @@ CREATE TABLE applications (
     id BIGSERIAL PRIMARY KEY,
     student_id BIGINT NOT NULL REFERENCES students(id),
     offer_id BIGINT NOT NULL REFERENCES offers(id),
-    raw_score DOUBLE PRECISION NOT NULL,
     score DOUBLE PRECISION NOT NULL CHECK (score BETWEEN 0 AND 200),
     priority INTEGER NOT NULL CHECK (priority BETWEEN 1 AND 15),
     is_budget BOOLEAN NOT NULL,
-    quote_type VARCHAR(255) NOT NULL,
+    quota_type VARCHAR(255) NOT NULL,
     is_actual BOOLEAN NOT NULL DEFAULT FALSE,
     is_counted BOOLEAN NOT NULL DEFAULT FALSE,
     is_checked BOOLEAN NOT NULL DEFAULT FALSE

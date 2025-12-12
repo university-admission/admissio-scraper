@@ -32,10 +32,6 @@ public class Application {
     @JoinColumn(name = "offer_id", referencedColumnName = "id", nullable = false)
     private Offer offer;
 
-//    @Column(name = "raw_score", nullable = false)
-//    @NonNull
-//    private Double rawScore;
-
     @Column(name = "score", nullable = false)
     @NonNull
     @Min(0)
