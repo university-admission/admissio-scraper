@@ -39,8 +39,6 @@ public class AnalyserService {
 
     @Transactional
     public void analyse() {
-        setData();
-
         loadDataToMemory();
         analyseData();
         saveData();
@@ -133,12 +131,12 @@ public class AnalyserService {
 
     private void analyseData() {
         for (Offer offer : allOffers) {
-            for (QuotaType quotaType : QuotaType.values()) {
+            for (QuotaType quotaType : QuotaType.values())
                 analyseBudgetByQuotaType(offer, quotaType);
-            }
-
-            analyseContract(offer);
         }
+
+        for (Offer offer : allOffers)
+            analyseContract(offer);
 
         for (Offer offer : allOffers) {
             setMinScoreIfFilled(offer, QuotaType.GENERAL);
@@ -207,6 +205,10 @@ public class AnalyserService {
         Supplier<Integer> getCount = getGetCount(application.getOffer(), quotaType, application.getIsBudget());
         Consumer<Integer> setCount = getSetCount(application.getOffer(), quotaType, application.getIsBudget());
 
+        Application prevApp = application.getIsBudget() ? getPrevApplication(application, quotaType) : getPrevApplication(application);
+        if (prevApp != null)
+            analyseRecursive(prevApp, prevApp.getQuotaType());
+
         if (application.getIsChecked())
             return;
 
@@ -214,10 +216,6 @@ public class AnalyserService {
             application.setIsChecked(true);
             return;
         }
-
-        Application prevApp = application.getIsBudget() ? getPrevApplication(application, quotaType) : getPrevApplication(application);
-        if (prevApp != null)
-            analyseRecursive(prevApp, prevApp.getQuotaType());
 
         if (getCount.get() >= maxPlaces) {
             application.setIsChecked(true);
@@ -256,6 +254,7 @@ public class AnalyserService {
                 }
 
                 application.setIsChecked(true);
+                application.setIsCounted(true);
                 setCount.accept(getCount.get() + 1);
                 studentApplications.forEach(this::checkApplication);
                 return;
@@ -357,7 +356,7 @@ public class AnalyserService {
         return index > 0 ? applications.get(index - 1) : null;
     }
 
-    private void setData() {
+    public void setData() {
         List<Major> majors = (List<Major>) majorRepository.findAll();
         List<University> universities = (List<University>) universityRepository.findAll();
 
