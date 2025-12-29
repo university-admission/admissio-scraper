@@ -19,3 +19,5 @@ jobs:
         java-version: 24
     - name: Build with Maven
       run: ./mvnw clean verify
+    - name: Run tests
+      run: ./mvnw test
