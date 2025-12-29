@@ -125,7 +125,7 @@ public class ApplicationService {
                 }
             }
         }
-        application.setRawScore(rawScoreSum);
+        application.getStudent().setRawScore(rawScoreSum);
 
 
         if (dto.getPriorityAndBudgetRaw() != null && !dto.getPriorityAndBudgetRaw().isEmpty()) {
@@ -180,7 +180,7 @@ public class ApplicationService {
 
     private boolean isApplicationAdded(String fullName, Double rawScore, Integer priority) {
         for (Application application : applicationsCache) {
-            if (application.getRawScore().equals(rawScore) && application.getPriority().equals(priority)
+            if (application.getStudent().getRawScore().equals(rawScore) && application.getPriority().equals(priority)
             && application.getStudent().getFullName().equalsIgnoreCase(fullName)) {
                 return true;
             }

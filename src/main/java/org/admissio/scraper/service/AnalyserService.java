@@ -4,10 +4,15 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.admissio.scraper.entity.*;
 import org.admissio.scraper.repository.*;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -15,6 +20,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AnalyserService {
     @NonNull
     ApplicationRepository applicationRepository;
@@ -28,6 +34,8 @@ public class AnalyserService {
     MajorRepository majorRepository;
     @NonNull
     EntityManager entityManager;
+    @NonNull
+    JdbcTemplate jdbcTemplate;
 
     private final Random random = new Random();
 
@@ -39,39 +47,46 @@ public class AnalyserService {
 
     @Transactional
     public void analyse() {
-        setData();
-
+        log.info("Starting analyser service");
+        long start = System.currentTimeMillis();
         loadDataToMemory();
         analyseData();
         saveData();
-        System.out.println("Application analysed");
+
+        long duration = (System.currentTimeMillis() - start) / 1000;
+        log.info("Application analysed for {} seconds.", duration);
     }
 
     //region Database
     private void saveData() {
-        int batchSize = 100;
-
-        saveOffersInBatches(batchSize);
-        saveApplicationsInBatches(batchSize);
+        offerRepository.saveAll(allOffers);
+        updateApplications(allApplications);
+        entityManager.flush();
     }
 
-    private void saveOffersInBatches(int batchSize) {
-        for (int i = 0; i < allOffers.size(); i += batchSize) {
-            int end = Math.min(i + batchSize, allOffers.size());
-            List<Offer> sub = allOffers.subList(i, end);
-            offerRepository.saveAll(sub);
-            entityManager.flush();
-            entityManager.clear();
-        }
-    }
+    private void updateApplications(List<Application> applications) {
+        String sql = "UPDATE applications SET is_counted = ?, is_checked = ?, is_actual = ? WHERE id = ?";
 
-    private void saveApplicationsInBatches(int batchSize) {
-        for (int i = 0; i < allApplications.size(); i += batchSize) {
-            int end = Math.min(i + batchSize, allApplications.size());
-            List<Application> sub = allApplications.subList(i, end);
-            applicationRepository.saveAll(sub);
-            entityManager.flush();
-            entityManager.clear();
+        int batchSize = 1000;
+
+        for (int i = 0; i < applications.size(); i += batchSize) {
+            List<Application> batch = applications.subList(i, Math.min(i + batchSize, applications.size()));
+
+            jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                    Application app = batch.get(i);
+                    ps.setBoolean(1, app.getIsCounted());
+                    ps.setBoolean(2, app.getIsChecked());
+                    ps.setBoolean(3, app.getIsActual());
+                    ps.setLong(4, app.getId());
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return batch.size();
+                }
+            });
         }
     }
 
@@ -80,52 +95,39 @@ public class AnalyserService {
         Map<Long, Offer> offersById = allOffers.stream()
                 .collect(Collectors.toMap(Offer::getId, o -> o));
 
-        allApplications = (List<Application>) applicationRepository.findAll();
+        allApplications = applicationRepository.findAllWithAssociations();
+        entityManager.clear();
 
         for (Application app : allApplications) {
-            Long offerId = app.getOffer().getId();
-            Offer canonicalOffer = offersById.get(offerId);
-            app.setOffer(canonicalOffer);
+            Offer canonical = offersById.get(app.getOffer().getId());
+            if (canonical != null) app.setOffer(canonical);
         }
 
         budgetApplicationsByKey = allApplications.stream()
                 .filter(Application::getIsBudget)
-                .collect(Collectors.groupingBy(a ->
-                                new ApplicationKey(
-                                        a.getOffer().getId(),
-                                        a.getQuotaType()
-                                ),
-                        Collectors.collectingAndThen(
-                                Collectors.toList(),
-                                list -> list.stream()
-                                        .sorted(Comparator.comparingDouble(Application::getScore).reversed())
-                                        .toList()
-                        )
+                .collect(Collectors.groupingBy(
+                        a -> new ApplicationKey(a.getOffer().getId(), a.getQuotaType())
                 ));
 
         contractApplicationsByOfferId = allApplications.stream()
                 .filter(app -> !app.getIsBudget())
                 .collect(Collectors.groupingBy(
-                        a -> a.getOffer().getId(),
-                        Collectors.collectingAndThen(
-                                Collectors.toList(),
-                                list -> list.stream()
-                                        .sorted(Comparator.comparingDouble(Application::getScore).reversed())
-                                        .toList()
-                        )));
+                        a -> a.getOffer().getId()
+                ));
 
-        studentApplicationsByKey = allApplications.stream()
-                .collect(Collectors.groupingBy(a ->
-                                new StudentApplicationKey(
-                                        a.getStudent().getId(),
-                                        a.getRawScore(),
-                                        a.getQuotaType()
-                                ),
+        studentApplicationsByKey = allApplications.parallelStream()
+                .collect(Collectors.groupingBy(
+                        a -> new StudentApplicationKey(
+                                a.getStudent().getId(),
+                                a.getStudent().getRawScore(),
+                                a.getQuotaType()
+                        ),
                         Collectors.collectingAndThen(
                                 Collectors.toList(),
-                                list -> list.stream()
-                                        .sorted(Comparator.comparingDouble(Application::getPriority))
-                                        .toList()
+                                list -> {
+                                    list.sort(Comparator.comparingInt(Application::getPriority));
+                                    return list;
+                                }
                         )
                 ));
     }
@@ -133,12 +135,12 @@ public class AnalyserService {
 
     private void analyseData() {
         for (Offer offer : allOffers) {
-            for (QuotaType quotaType : QuotaType.values()) {
+            for (QuotaType quotaType : QuotaType.values())
                 analyseBudgetByQuotaType(offer, quotaType);
-            }
-
-            analyseContract(offer);
         }
+
+        for (Offer offer : allOffers)
+            analyseContract(offer);
 
         for (Offer offer : allOffers) {
             setMinScoreIfFilled(offer, QuotaType.GENERAL);
@@ -207,6 +209,10 @@ public class AnalyserService {
         Supplier<Integer> getCount = getGetCount(application.getOffer(), quotaType, application.getIsBudget());
         Consumer<Integer> setCount = getSetCount(application.getOffer(), quotaType, application.getIsBudget());
 
+        Application prevApp = application.getIsBudget() ? getPrevApplication(application, quotaType) : getPrevApplication(application);
+        if (prevApp != null)
+            analyseRecursive(prevApp, prevApp.getQuotaType());
+
         if (application.getIsChecked())
             return;
 
@@ -215,17 +221,13 @@ public class AnalyserService {
             return;
         }
 
-        Application prevApp = application.getIsBudget() ? getPrevApplication(application, quotaType) : getPrevApplication(application);
-        if (prevApp != null)
-            analyseRecursive(prevApp, prevApp.getQuotaType());
-
         if (getCount.get() >= maxPlaces) {
             application.setIsChecked(true);
             return;
         }
 
         List<Application> studentApplications = studentApplicationsByKey.getOrDefault(
-                new StudentApplicationKey(application.getStudent().getId(), application.getRawScore(), quotaType),
+                new StudentApplicationKey(application.getStudent().getId(), application.getStudent().getRawScore(), quotaType),
                 new ArrayList<>()
         );
 
@@ -256,6 +258,7 @@ public class AnalyserService {
                 }
 
                 application.setIsChecked(true);
+                application.setIsCounted(true);
                 setCount.accept(getCount.get() + 1);
                 studentApplications.forEach(this::checkApplication);
                 return;
@@ -277,7 +280,7 @@ public class AnalyserService {
         }
 
         List<Application> studentApps = studentApplicationsByKey.getOrDefault(
-                new StudentApplicationKey(application.getStudent().getId(), application.getRawScore(), application.getQuotaType()),
+                new StudentApplicationKey(application.getStudent().getId(), application.getStudent().getRawScore(), application.getQuotaType()),
                 Collections.emptyList()
         );
 
@@ -357,7 +360,7 @@ public class AnalyserService {
         return index > 0 ? applications.get(index - 1) : null;
     }
 
-    private void setData() {
+    public void setData() {
         List<Major> majors = (List<Major>) majorRepository.findAll();
         List<University> universities = (List<University>) universityRepository.findAll();
 
@@ -401,7 +404,7 @@ public class AnalyserService {
             for (int i = 0; i < priorities.size() - 2; i++) {
                 int priority = priorities.get(i);
                 if (priority > 5) {
-                    applicationRepository.save(new Application(student, offers.get(i), score, score, priority, false, quotaType));
+                    applicationRepository.save(new Application(student, offers.get(i), score, priority, false, quotaType));
                     switch (quotaType){
                         case GENERAL -> offers.get(i).setBudgetApplications(offers.get(i).getBudgetApplications() + 1);
                         case QUOTA_1 -> offers.get(i).setQuota1Applications(offers.get(i).getQuota1Applications() + 1);
@@ -412,7 +415,7 @@ public class AnalyserService {
                     }
                 }
                 else {
-                    applicationRepository.save(new Application(student, offers.get(i), score, score, priority, true, quotaType));
+                    applicationRepository.save(new Application(student, offers.get(i), score, priority, true, quotaType));
                     offers.get(i).setContractApplications(offers.get(i).getContractApplications() + 1);
                 }
             }
