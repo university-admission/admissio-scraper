@@ -34,8 +34,8 @@ public class ScraperService {
     }
 
     public void scrapeBaseData(){
-//        universityRegionService.scrapeUniversitiesByRegion();
-//        batchSavingService.saveUniversitiesInBatch(UniversityService.getUniversitiesCacheList());
+        universityRegionService.scrapeUniversitiesByRegion();
+        batchSavingService.saveUniversitiesInBatch(UniversityService.getUniversitiesCacheList());
         offerService.scrapeOffers();
     }
 

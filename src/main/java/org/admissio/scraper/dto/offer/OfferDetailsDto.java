@@ -60,4 +60,7 @@ public class OfferDetailsDto {
     @JsonProperty("st") // Nested object for statistics (where min competition score is)
     private ScoreStatisticsDto scoreStatistics;
 
+    @JsonProperty("qn") // indicates if it is a master's or bachelor's program
+    private String degree;
+
 }

@@ -60,7 +60,7 @@ public class ApplicationService {
 
     public void scrapeApplications() {
         System.out.println("Scraping applications");
-        long startOfferId = 1500571;
+        long startOfferId = -1;
         boolean startScraping = startOfferId <= 0;
         for (Offer offer : offerRepository.findAll()) {
 

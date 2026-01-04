@@ -18,8 +18,8 @@ public class TempAnalyserController implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        flyway.clean();
-        flyway.migrate();
+        //flyway.clean();
+        //flyway.migrate();
 
         //analyserService.analyse();
 
@@ -27,6 +27,7 @@ public class TempAnalyserController implements CommandLineRunner {
         long startTime = System.currentTimeMillis();
 
         //scraperService.scrapeBaseData();
+        scraperService.updateApplications();
 
         long totalDurationMillis  = System.currentTimeMillis() - startTime;
         System.out.println("Scraping completed successfully!");

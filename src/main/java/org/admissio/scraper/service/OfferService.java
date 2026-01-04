@@ -144,6 +144,10 @@ public class OfferService {
             return;
         }
 
+        // add only bachelor's offers!!!
+        if (!offerDto.getDegree().equals("Бакалавр"))
+            return;
+
         Offer offer = new Offer();
 
         offer.setEdboId(offerDto.getEdboUsid());
