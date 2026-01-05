@@ -231,7 +231,7 @@ public class ApplicationService {
 
     private boolean decryptApplicationDto(ApplicationDto dto, Long offerId) {
         if (dto.getPrsId() == null || dto.getOrderNumber() == null) {
-            System.err.println("Не вдалося розшифрувати дані: відсутні 'prsid' або 'n' для offerId=" + offerId);
+            System.err.println("Didn't manage to decrypt data: 'prsid' or 'n' are absent for offerId=" + offerId);
             return false;
         }
 
@@ -246,10 +246,11 @@ public class ApplicationService {
             // Decrypt priority and budget
             String decryptedPriority = VstupDataDecryptor.decrypt(dto.getPriorityAndBudgetRaw(), dynamicPart);
             dto.setPriorityAndBudgetRaw(decryptedPriority); // Тепер тут буде "1", "2", "К" і т.д.
+            //System.out.println(decryptedPriority + " " + decryptedName + " " + dto.getScore()); // log if data gets decrypted
 
             return true;
         } catch (Exception e) {
-            System.err.println("Помилка розшифрування для offerId=" + offerId + ". Зашифроване ПІБ: " + dto.getStudentFullName());
+            System.err.println("Error in decrypting for offerId=" + offerId + ". Encrypted fio: " + dto.getStudentFullName());
             return false;
         }
     }
