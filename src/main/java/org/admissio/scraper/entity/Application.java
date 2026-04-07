@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @Table(name = "applications")
 @Getter
@@ -61,4 +63,12 @@ public class Application {
 
     @Column(name = "is_checked", nullable = false)
     private Boolean isChecked = false;
+
+    @Transient
+    @JsonIgnore
+    private Application previousInOffer;
+
+    @Transient
+    @JsonIgnore
+    private List<Application> studentSiblingApplications;
 }
