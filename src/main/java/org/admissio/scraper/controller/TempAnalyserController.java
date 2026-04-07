@@ -24,7 +24,6 @@ public class TempAnalyserController implements CommandLineRunner {
         flyway.clean();
         flyway.migrate();
 
-        analyserService.setData();
         analyserService.analyse();
 
 //        System.out.println("Start of scrapping!");
