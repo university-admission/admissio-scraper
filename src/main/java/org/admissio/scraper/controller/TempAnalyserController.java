@@ -13,8 +13,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 @AllArgsConstructor
 @Profile("!test")
 public class TempAnalyserController implements CommandLineRunner {
-    AnalyserService analyserService;
-    ScraperService scraperService;
+    private final AnalyserService analyserService;
+    private final ScraperService scraperService;
+    private final ExportDataService exportDataService;
+
     private Flyway flyway;
 
     @Override
@@ -39,5 +41,7 @@ public class TempAnalyserController implements CommandLineRunner {
 //        System.out.printf("Total duration: %d hours, %d minutes, %d seconds, %d milliseconds.%n",
 //                hours, minutes, seconds, milliseconds);
 
+        exportDataService.exportStudentsToCSV();
+        exportDataService.exportApplicationToCSV();
     }
 }
